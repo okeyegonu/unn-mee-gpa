@@ -11,7 +11,7 @@ import { flattenCurriculum, semesterKeys, maxAttemptsForYear } from './curriculu
 import {
   emptyState, setGrade, setUnitOverride, clearAll,
   evaluateCourse, summarise, semesterSummaries, yearSummaries, formatGpa,
-  setAttempt,
+  setAttempt, canonicaliseState, attemptsOf,
 } from './gpa-engine.js';
 import { ResultsRepository, PreferencesStore } from './storage.js';
 
@@ -92,7 +92,14 @@ async function boot() {
   });
 
   const loaded = await repo.load();
-  state = loaded.state ?? emptyState(doc.curriculum_version);
+  const raw = loaded.state ?? emptyState(doc.curriculum_version);
+
+  // Anything arriving from storage is brought into canonical form, and the
+  // tidied version written straight back, so a record left non-canonical by an
+  // earlier version or by hand-editing is repaired once and for all rather than
+  // carried around.
+  state = canonicaliseState(courses, raw);
+  if (loaded.found && JSON.stringify(state) !== JSON.stringify(raw)) await repo.save(state);
 
   if (!loaded.found && loaded.otherVersions.length > 0) offerCarryOver(loaded.otherVersions);
 
@@ -319,6 +326,7 @@ function wireGlobalControls() {
       institution: doc.institution,
       programme: doc.programme,
       summary: publicSummary(),
+      course_records: courseRecords(),
     });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -345,7 +353,7 @@ function wireGlobalControls() {
           `Grades for courses that no longer exist will simply be ignored.`
         : '';
       if (!confirm(`Import ${n} grade(s)? This replaces the results currently entered here.${warn}`)) return;
-      state = parsed.state;
+      state = canonicaliseState(courses, parsed.state);
       await persist();
       syncControlsFromState();
       refreshAll();
@@ -541,6 +549,33 @@ function publicSummary() {
     gpa: formatGpa(t.gpa, precision.normal),
     gpa_full_precision: formatGpa(t.gpa, precision.full),
   };
+}
+
+/**
+ * One record per course the student has sat, listing every sitting in order.
+ * `grades` and `repeats` remain the machine-readable source of truth; this is
+ * the same information written out so that an export can be read and checked.
+ */
+function courseRecords() {
+  const out = [];
+  for (const course of courses) {
+    const sittings = attemptsOf(course, state);
+    if (sittings.length === 0) continue;
+    const ev = evaluateCourse(course, state);
+    out.push({
+      course_id: course.id,
+      code: course.code,
+      year: course.year,
+      semester: course.semester,
+      units: ev.baseUnits,
+      sittings,                       // e.g. ["F", "F", "B"], oldest first
+      sittings_allowed: ev.maxAttempts,
+      passed: ev.passed,
+      units_counted: ev.units,        // units x number of sittings
+      quality_points: ev.coursePoint,
+    });
+  }
+  return out;
 }
 
 function offerCarryOver(others) {

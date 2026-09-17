@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-17T22:24:50.332Z by tools/build-single-file.mjs.
+  Built 2026-09-17T22:28:06.648Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -819,6 +819,75 @@ function isFailingGrade(course, grade) {
 }
 
 /**
+ * The canonical record of a course's sittings.
+ *
+ * Exactly one list of grades represents any given academic record, so that the
+ * same history can never be stored two different ways. The rules, in order:
+ *
+ *   - a blank or invalid entry is not a sitting, so it is dropped;
+ *   - the list stops at the year's allowance;
+ *   - the list stops at the first pass, because a passed course is not re-sat.
+ *
+ * Every write goes through this, so the stored form is canonical by
+ * construction and re-recording the same result — an F included — can never
+ * append a second copy of it.
+ */
+function canonicalSittings(course, grades) {
+  const max = Math.max(1, course?.maxAttempts ?? 1);
+  const out = [];
+  for (const raw of grades ?? []) {
+    const g = normaliseGrade(raw);
+    if (g === NOT_ENTERED) continue;          // not a sitting
+    out.push(g);
+    if (out.length >= max) break;             // allowance spent
+    if (!isFailingGrade(course, g)) break;    // passed: never sat again
+  }
+  return out;
+}
+
+/** Write a canonical sitting list back into the state, first sitting first. */
+function writeSittings(state, course, list) {
+  const canon = canonicalSittings(course, list);
+  const grades = { ...state.grades };
+  const repeats = { ...(state.repeats ?? {}) };
+  if (canon.length === 0) {
+    delete grades[course.id];
+    delete repeats[course.id];
+  } else {
+    grades[course.id] = canon[0];
+    if (canon.length > 1) repeats[course.id] = canon.slice(1);
+    else delete repeats[course.id];
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
+ * Bring a whole state into canonical form.
+ *
+ * Applied to anything arriving from outside the engine — a record loaded from
+ * storage, or an imported file — so that a hand-edited or older file is tidied
+ * once rather than carried around. Entries for courses this curriculum does not
+ * contain are left untouched rather than discarded, since they may belong to a
+ * different curriculum version.
+ */
+function canonicaliseState(courses, state) {
+  const known = new Set(courses.map((c) => c.id));
+  const grades = {};
+  const repeats = {};
+  for (const [id, g] of Object.entries(state?.grades ?? {})) {
+    if (!known.has(id)) { grades[id] = g; if (state?.repeats?.[id]) repeats[id] = state.repeats[id]; }
+  }
+  for (const course of courses) {
+    const raw = [state?.grades?.[course.id], ...(state?.repeats?.[course.id] ?? [])];
+    const canon = canonicalSittings(course, raw);
+    if (canon.length === 0) continue;
+    grades[course.id] = canon[0];
+    if (canon.length > 1) repeats[course.id] = canon.slice(1);
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
  * Every sitting of a course, in order, as a list of valid grades.
  *
  * The first sitting lives in `state.grades` and any repeats in `state.repeats`.
@@ -830,24 +899,10 @@ function isFailingGrade(course, grade) {
  * blank the whole course is treated as not attempted.
  */
 function attemptsOf(course, state) {
-  const first = normaliseGrade(state?.grades?.[course.id]);
-  if (first === NOT_ENTERED) return [];
+  const first = state?.grades?.[course.id];
+  if (normaliseGrade(first) === NOT_ENTERED) return [];
   const rest = Array.isArray(state?.repeats?.[course.id]) ? state.repeats[course.id] : [];
-  // Once a course is passed it cannot be taken again, so the sequence stops at
-  // the first pass. Anything recorded after it is disregarded rather than
-  // counted, which also means a hand-edited file cannot manufacture an extra
-  // sitting of a course that was already passed.
-  if (!isFailingGrade(course, first)) return [first];
-
-  const out = [first];
-  for (const r of rest) {
-    const g = normaliseGrade(r);
-    if (g === NOT_ENTERED) continue;
-    out.push(g);
-    if (out.length >= Math.max(1, course.maxAttempts ?? 1)) break;
-    if (!isFailingGrade(course, g)) break;   // passed: no further sitting
-  }
-  return out;
+  return canonicalSittings(course, [first, ...rest]);
 }
 
 /**
@@ -1056,41 +1111,35 @@ function setGrade(state, id, value, course = null) {
  */
 function setAttempt(state, course, index, value) {
   const id = typeof course === 'string' ? course : course.id;
-  if (index === 0) return setGrade(state, id, value, typeof course === 'string' ? null : course);
-
-  const max = Math.max(1, (typeof course === 'string' ? 1 : course.maxAttempts) ?? 1);
-  const grade = normaliseGrade(value);
-  const repeats = { ...(state.repeats ?? {}) };
-  const list = Array.isArray(repeats[id]) ? [...repeats[id]] : [];
-  const at = index - 1;
-
-  if (grade === NOT_ENTERED) {
-    if (at < list.length) list.splice(at, 1);
-  } else if (at < list.length) {
-    list[at] = grade;
-    // Recording a pass closes the course: any later sitting becomes impossible.
-    if (typeof course !== 'string' && !isFailingGrade(course, grade)) list.length = at + 1;
-  } else if (list.length + 1 < max) {
-    list.push(grade);          // +1 for the first sitting
-  } else {
-    return state;              // at the allowance: nothing changes
+  if (typeof course === 'string' || index === 0) {
+    if (index === 0) return setGrade(state, id, value, typeof course === 'string' ? null : course);
+    return state;
   }
 
-  if (list.length === 0) delete repeats[id];
-  else repeats[id] = list;
-  return { ...state, repeats };
+  const current = attemptsOf(course, state);
+  const grade = normaliseGrade(value);
+  const next = [...current];
+
+  if (index < next.length) {
+    if (grade === NOT_ENTERED) next.splice(index, 1);   // remove, closing the gap
+    else next[index] = grade;
+  } else if (grade !== NOT_ENTERED) {
+    next.push(grade);                                    // one more sitting
+  } else {
+    return state;                                        // blank into a blank slot
+  }
+
+  return writeSittings(state, course, next);
 }
 
 /** Append one more sitting, if the course's allowance has room for it. */
-function addAttempt(state, course, value = NOT_ENTERED) {
-  const id = course.id;
-  const taken = Array.isArray(state.repeats?.[id]) ? state.repeats[id].length : 0;
-  if (!state.grades?.[id]) return state;                 // nothing sat yet
-  if (taken + 1 >= Math.max(1, course.maxAttempts ?? 1)) return state;
-  if (!evaluateCourse(course, state).canAddAttempt) return state;   // already passed
-  const repeats = { ...(state.repeats ?? {}) };
-  repeats[id] = [...(repeats[id] ?? []), normaliseGrade(value)];
-  return { ...state, repeats };
+function addAttempt(state, course, value) {
+  const grade = normaliseGrade(value);
+  if (grade === NOT_ENTERED) return state;               // a blank is not a sitting
+  const current = attemptsOf(course, state);
+  if (current.length === 0) return state;                // nothing sat yet
+  if (!evaluateCourse(course, state).canAddAttempt) return state;   // passed, or allowance spent
+  return writeSittings(state, course, [...current, grade]);
 }
 
 /** Drop every repeat of a course, keeping the first sitting. */
@@ -1181,7 +1230,7 @@ function cloneRepeats(source) {
   if (!source || typeof source !== 'object') return out;
   for (const [id, list] of Object.entries(source)) {
     if (!Array.isArray(list)) continue;
-    const clean = list.filter((g) => typeof g === 'string');
+    const clean = list.filter((g) => typeof g === 'string' && g.trim() !== '');
     if (clean.length > 0) out[id] = clean;
   }
   return out;
@@ -1479,7 +1528,14 @@ async function boot() {
   });
 
   const loaded = await repo.load();
-  state = loaded.state ?? emptyState(doc.curriculum_version);
+  const raw = loaded.state ?? emptyState(doc.curriculum_version);
+
+  // Anything arriving from storage is brought into canonical form, and the
+  // tidied version written straight back, so a record left non-canonical by an
+  // earlier version or by hand-editing is repaired once and for all rather than
+  // carried around.
+  state = canonicaliseState(courses, raw);
+  if (loaded.found && JSON.stringify(state) !== JSON.stringify(raw)) await repo.save(state);
 
   if (!loaded.found && loaded.otherVersions.length > 0) offerCarryOver(loaded.otherVersions);
 
@@ -1706,6 +1762,7 @@ function wireGlobalControls() {
       institution: doc.institution,
       programme: doc.programme,
       summary: publicSummary(),
+      course_records: courseRecords(),
     });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1732,7 +1789,7 @@ function wireGlobalControls() {
           `Grades for courses that no longer exist will simply be ignored.`
         : '';
       if (!confirm(`Import ${n} grade(s)? This replaces the results currently entered here.${warn}`)) return;
-      state = parsed.state;
+      state = canonicaliseState(courses, parsed.state);
       await persist();
       syncControlsFromState();
       refreshAll();
@@ -1928,6 +1985,33 @@ function publicSummary() {
     gpa: formatGpa(t.gpa, precision.normal),
     gpa_full_precision: formatGpa(t.gpa, precision.full),
   };
+}
+
+/**
+ * One record per course the student has sat, listing every sitting in order.
+ * `grades` and `repeats` remain the machine-readable source of truth; this is
+ * the same information written out so that an export can be read and checked.
+ */
+function courseRecords() {
+  const out = [];
+  for (const course of courses) {
+    const sittings = attemptsOf(course, state);
+    if (sittings.length === 0) continue;
+    const ev = evaluateCourse(course, state);
+    out.push({
+      course_id: course.id,
+      code: course.code,
+      year: course.year,
+      semester: course.semester,
+      units: ev.baseUnits,
+      sittings,                       // e.g. ["F", "F", "B"], oldest first
+      sittings_allowed: ev.maxAttempts,
+      passed: ev.passed,
+      units_counted: ev.units,        // units x number of sittings
+      quality_points: ev.coursePoint,
+    });
+  }
+  return out;
 }
 
 function offerCarryOver(others) {

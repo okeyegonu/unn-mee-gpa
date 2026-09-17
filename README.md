@@ -45,7 +45,7 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 106 calculation, repeat, persistence, preference and curriculum tests
+npm test             # 119 calculation, repeat, persistence, preference and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
@@ -147,6 +147,26 @@ of each sitting, and totals the course points.
 The checkbox is off by default. It switches itself on for anyone who already has
 repeats recorded, because hiding sittings that are counting towards the GPA would
 make the figures impossible to explain.
+
+**One record per course, and only one.** With a single grade per course, "no
+duplicates" came free — the same key was overwritten. A list of sittings has to
+earn it. Exactly one stored form represents any given academic record:
+
+- a blank or invalid entry is not a sitting, so it is never stored;
+- the list stops at the year's allowance;
+- the list stops at the first pass.
+
+Every write goes through that canonical form, so re-recording a result — an `F`
+included — can never append a second copy of it, and the same history always
+serialises to the same bytes however it was arrived at. Anything loaded from
+storage or imported from a file is canonicalised on the way in and the tidied
+version written straight back, so a record left untidy by hand-editing or by an
+earlier version is repaired once rather than carried around. The canonicaliser
+is a fixed point: running it on a tidy record changes nothing.
+
+Each sitting is separately addressable, so three failures of the same course are
+three facts rather than a tally, and any one of them can be corrected without
+disturbing the others.
 
 **Storage.** The first sitting stays in `grades` exactly where it has always
 been; repeats live in a separate `repeats` map. A result saved before this
@@ -336,6 +356,11 @@ are kept untouched, and the student is offered a button to copy them across.
 `src/storage.js` exposes an async repository (`load`, `save`, `clear`,
 `exportPayload`, `parseImport`). Swapping in a server-backed implementation of
 that interface requires no change to the GPA engine or the UI's call sites.
+
+An export also carries `course_records`: one entry per course sat, listing every
+sitting in order with the units and quality points it contributed. `grades` and
+`repeats` remain the machine-readable source of truth; this is the same record
+written out so that an export can be read and checked by eye.
 
 **Export / Import / Reset** are in the top-right. Export writes a portable JSON
 file carrying the curriculum version, the grades and the export timestamp — the

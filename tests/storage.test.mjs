@@ -425,3 +425,73 @@ test('clearing results clears repeats too', async () => {
   assert.deepEqual(loaded.state.grades, {});
   assert.deepEqual(loaded.state.repeats, {});
 });
+
+/* ---- the stored record of sittings is itself idempotent ---- */
+
+test('saving a repeated course many times never grows its record', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 8, failingGrades: ['F'] };
+  const repo = reload(backend);
+
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'F');
+  state = setAttempt(state, course, 2, 'B');
+
+  for (let i = 0; i < 30; i++) await repo.save(state);
+
+  const rec = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+  assert.deepEqual(rec.grades, { c1: 'F' });
+  assert.deepEqual(rec.repeats, { c1: ['F', 'B'] }, 'two repeats, not sixty');
+});
+
+test('a save / reload / save cycle is a fixed point', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 8, failingGrades: ['F'] };
+  let repo = reload(backend);
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'F');
+  await repo.save(state);
+
+  const shapes = new Set();
+  for (let i = 0; i < 5; i++) {
+    repo = reload(backend);
+    const loaded = await repo.load();
+    await repo.save(loaded.state);
+    const rec = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+    shapes.add(JSON.stringify({ grades: rec.grades, repeats: rec.repeats }));
+  }
+  assert.equal(shapes.size, 1, 'the record never drifts across load/save rounds');
+  assert.equal([...shapes][0], '{"grades":{"c1":"F"},"repeats":{"c1":["F"]}}');
+});
+
+test('importing the same file twice does not double the sittings', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 8, failingGrades: ['F'] };
+  const repo = reload(backend);
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'F');
+  state = setAttempt(state, course, 2, 'C');
+  const payload = JSON.parse(JSON.stringify(await repo.exportPayload(state)));
+
+  const once = repo.parseImport(payload).state;
+  const twice = repo.parseImport(JSON.parse(JSON.stringify(payload))).state;
+  assert.deepEqual(once.repeats, { c1: ['F', 'C'] });
+  assert.deepEqual(twice.repeats, once.repeats, 'importing again is the same record, not more of it');
+
+  await repo.save(once);
+  await repo.save(twice);
+  const rec = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+  assert.deepEqual(rec.repeats, { c1: ['F', 'C'] });
+});
+
+test('blank and non-string entries never reach the stored record', async () => {
+  const backend = new MemoryBackend();
+  const repo = reload(backend);
+  await repo.save({
+    grades: { c1: 'F' },
+    repeats: { c1: ['', '   ', 'F', null, 7, 'B'] },
+    unitOverrides: {},
+  });
+  const rec = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+  assert.deepEqual(rec.repeats, { c1: ['F', 'B'] });
+});

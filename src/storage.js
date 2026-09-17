@@ -64,7 +64,7 @@ function cloneRepeats(source) {
   if (!source || typeof source !== 'object') return out;
   for (const [id, list] of Object.entries(source)) {
     if (!Array.isArray(list)) continue;
-    const clean = list.filter((g) => typeof g === 'string');
+    const clean = list.filter((g) => typeof g === 'string' && g.trim() !== '');
     if (clean.length > 0) out[id] = clean;
   }
   return out;

@@ -172,6 +172,50 @@ try {
     s.courses === '0' && s.units === '0' && s.gpa === '—', JSON.stringify(s));
   check('the row collapses back to a single box', (await boxes('y3s1-MEE313')) === 1);
 
+  /* ---- the stored record is canonical, and stays canonical ---- */
+  const rec = () => exec(`
+    var r = JSON.parse(localStorage.getItem('unn-mee-gpa-calculator')).records['unn-mee-beng-5yr@2023.1'];
+    return JSON.stringify({ grades: r.grades, repeats: r.repeats });
+  `);
+
+  // Plant a deliberately messy record: blanks, an invalid grade, sittings
+  // recorded after a pass, and more sittings than a Year 3 course allows.
+  await exec(`localStorage.setItem('unn-mee-gpa-calculator', JSON.stringify({
+    schema_version: 1, active: 'unn-mee-beng-5yr@2023.1',
+    records: { 'unn-mee-beng-5yr@2023.1': {
+      curriculum_id: 'unn-mee-beng-5yr', curriculum_version: '2023.1',
+      saved_at: '2026-09-17T00:00:00.000Z',
+      grades: { 'y3s1-MEE313': 'F' },
+      repeats: { 'y3s1-MEE313': ['', 'F', null, 'Z', 'B', 'F', 'A', 'F', 'F', 'F', 'F'] },
+      unitOverrides: {} } } }));`);
+  await go('about:blank');
+  await go(APP);
+  await waitFor(`document.querySelectorAll('tr[data-id]').length > 0`, 'reload with a messy record');
+  await waitFor(`document.getElementById('stat-courses').textContent.trim() !== '0'`, 'saved results');
+
+  const CANON = '{"grades":{"y3s1-MEE313":"F"},"repeats":{"y3s1-MEE313":["F","B"]}}';
+  const tidied = await rec();
+  check('a record that was never canonical is repaired on load', tidied === CANON, tidied);
+  s = await summary();
+  check('and the GPA matches the repaired record: 12 / 9 = 1.33',
+    s.units === '9' && s.points === '12' && s.gpa === '1.33', JSON.stringify(s));
+  check('the row shows exactly the three sittings that survived',
+    (await boxes('y3s1-MEE313')) === 3);
+
+  const shapes = new Set([tidied]);
+  for (let i = 0; i < 3; i++) {
+    await go('about:blank');
+    await go(APP);
+    await waitFor(`document.querySelectorAll('tr[data-id]').length > 0`, 'reload');
+    await new Promise((r) => setTimeout(r, 400));
+    shapes.add(await rec());
+  }
+  check('repeated reloads never change the record', shapes.size === 1, [...shapes].join(' | '));
+
+  for (let i = 0; i < 6; i++) await sit('y3s1-MEE313', 1, 'F');
+  check('re-recording the same F six times still leaves exactly one',
+    (await rec()) === CANON, await rec());
+
   await exec(`localStorage.removeItem('unn-mee-gpa-calculator');`);
   await exec(`localStorage.removeItem('unn-mee-gpa-calculator:prefs');`);
 } finally {

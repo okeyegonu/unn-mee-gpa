@@ -19,7 +19,7 @@ import { dirname, resolve } from 'node:path';
 
 import {
   emptyState, setGrade, setAttempt, addAttempt, clearRepeats,
-  evaluateCourse, attemptsOf, summarise,
+  evaluateCourse, attemptsOf, summarise, canonicaliseState, canonicalSittings,
 } from '../src/gpa-engine.js';
 import { flattenCurriculum, maxAttemptsForYear, indexCourses } from '../src/curriculum.js';
 
@@ -404,4 +404,138 @@ test('treating E as a failure is one configuration change', () => {
   const s = setGrade(emptyState(), 'c1', 'E');
   assert.equal(evaluateCourse(lenient, s).canAddAttempt, false, 'E passes by default');
   assert.equal(evaluateCourse(strict, s).canAddAttempt, true, 'E fails when configured to');
+});
+
+/* --------------------------------------------------------------------------
+   Idempotency of the record itself.
+
+   With one grade per course, "no duplicates" came free: the same key was
+   overwritten. Once a course carries a list of sittings, that has to be earned.
+   The guarantee is that exactly ONE stored form represents any given academic
+   record, so re-recording a result — an F included — can never append a second
+   copy of it, and the same history always serialises identically.
+   -------------------------------------------------------------------------- */
+
+const R = (id, units, maxAttempts = 8, failingGrades = ['F']) =>
+  ({ id, code: id, title: id, units, year: 1, semester: 1, maxAttempts, failingGrades });
+
+test('re-recording the same sitting never appends another copy', () => {
+  const c = R('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  for (let i = 0; i < 25; i++) s = setAttempt(s, c, 1, 'F');
+  assert.deepEqual(s.repeats, { c1: ['F'] }, 'one F, not twenty-five');
+  assert.deepEqual(attemptsOf(c, s), ['F', 'F']);
+  assert.equal(summarise([c], s).units, 6);
+});
+
+test('re-recording an F at every position is idempotent', () => {
+  const c = R('c1', 2);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  for (let round = 0; round < 3; round++) {
+    for (let i = 1; i < 5; i++) s = setAttempt(s, c, i, 'F');
+  }
+  assert.deepEqual(attemptsOf(c, s), ['F', 'F', 'F', 'F', 'F'],
+    'five sittings, however many times they are written');
+  assert.deepEqual(s.repeats, { c1: ['F', 'F', 'F', 'F'] });
+  assert.equal(summarise([c], s).units, 10);
+});
+
+test('a blank is never stored as a sitting', () => {
+  const c = R('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  for (let i = 0; i < 6; i++) s = addAttempt(s, c, '');
+  assert.deepEqual(s.repeats ?? {}, {}, 'no empty slots accumulate');
+  for (let i = 0; i < 6; i++) s = setAttempt(s, c, 1, '');
+  assert.deepEqual(s.repeats ?? {}, {});
+  assert.deepEqual(attemptsOf(c, s), ['F']);
+});
+
+test('the same history always serialises to the same bytes', () => {
+  const c = R('c1', 3);
+
+  // Reached by entering the sittings in order ...
+  let a = setGrade(emptyState(), 'c1', 'F');
+  a = setAttempt(a, c, 1, 'F');
+  a = setAttempt(a, c, 2, 'B');
+
+  // ... by overshooting and correcting ...
+  let b = setGrade(emptyState(), 'c1', 'F');
+  b = setAttempt(b, c, 1, 'C');
+  b = setAttempt(b, c, 1, 'F');
+  b = setAttempt(b, c, 2, 'A');
+  b = setAttempt(b, c, 2, 'B');
+
+  // ... and by adding a sitting that is then removed again.
+  let d = setGrade(emptyState(), 'c1', 'F');
+  d = setAttempt(d, c, 1, 'F');
+  d = setAttempt(d, c, 2, 'D');
+  d = setAttempt(d, c, 2, '');
+  d = setAttempt(d, c, 2, 'B');
+
+  const shape = (x) => JSON.stringify({ grades: x.grades, repeats: x.repeats });
+  assert.equal(shape(a), shape(b));
+  assert.equal(shape(a), shape(d));
+  assert.equal(shape(a), '{"grades":{"c1":"F"},"repeats":{"c1":["F","B"]}}');
+});
+
+test('canonicaliseState repairs a record that was never canonical', () => {
+  const c = R('c1', 3, 4);
+  const messy = {
+    ...emptyState(),
+    grades: { c1: 'F' },
+    repeats: { c1: ['', 'F', null, 'Z', 'B', 'F', 'A', 'F', 'F', 'F'] },
+  };
+  //            ^blank      ^invalid   ^pass — everything after it is impossible
+  const clean = canonicaliseState([c], messy);
+  assert.deepEqual(clean.repeats, { c1: ['F', 'B'] });
+  assert.deepEqual(attemptsOf(c, clean), ['F', 'F', 'B']);
+  assert.equal(summarise([c], clean).units, 9);
+
+  // and it is a fixed point: running it again changes nothing
+  assert.deepEqual(canonicaliseState([c], clean), clean);
+});
+
+test('canonicaliseState trims a record that exceeds the allowance', () => {
+  const c = R('c1', 2, 4);                       // 4 sittings allowed
+  const over = { ...emptyState(), grades: { c1: 'F' }, repeats: { c1: Array(19).fill('F') } };
+  const clean = canonicaliseState([c], over);
+  assert.equal(clean.repeats.c1.length, 3, 'first sitting plus three repeats');
+  assert.equal(attemptsOf(c, clean).length, 4);
+  assert.equal(summarise([c], clean).units, 8);
+});
+
+test('canonicaliseState leaves courses from another curriculum alone', () => {
+  const c = R('c1', 3);
+  const mixed = {
+    ...emptyState(),
+    grades: { c1: 'A', 'from-another-version': 'B' },
+    repeats: { 'from-another-version': ['C'] },
+  };
+  const clean = canonicaliseState([c], mixed);
+  assert.equal(clean.grades['from-another-version'], 'B', 'not silently discarded');
+  assert.deepEqual(clean.repeats['from-another-version'], ['C']);
+  assert.equal(clean.grades.c1, 'A');
+});
+
+test('canonicaliseState is a fixed point for ordinary records', () => {
+  const c1 = R('c1', 3), c2 = R('c2', 2);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  s = setAttempt(s, c1, 1, 'B');
+  s = setGrade(s, 'c2', 'A');
+  assert.deepEqual(canonicaliseState([c1, c2], s), s);
+});
+
+test('every sitting is addressable, so an F is a fact rather than a tally', () => {
+  // Three separate failures of the same course are three sittings, each of
+  // which can be corrected independently without disturbing the others.
+  const c = R('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  s = setAttempt(s, c, 1, 'F');
+  s = setAttempt(s, c, 2, 'F');
+  assert.deepEqual(attemptsOf(c, s), ['F', 'F', 'F']);
+  assert.equal(summarise([c], s).units, 9);
+
+  s = setAttempt(s, c, 1, 'D');      // the second sitting was actually a D
+  assert.deepEqual(attemptsOf(c, s), ['F', 'D'], 'and the third can no longer exist');
+  assert.equal(summarise([c], s).points, 6);
 });

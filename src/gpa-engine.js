@@ -40,6 +40,75 @@ export function isFailingGrade(course, grade) {
 }
 
 /**
+ * The canonical record of a course's sittings.
+ *
+ * Exactly one list of grades represents any given academic record, so that the
+ * same history can never be stored two different ways. The rules, in order:
+ *
+ *   - a blank or invalid entry is not a sitting, so it is dropped;
+ *   - the list stops at the year's allowance;
+ *   - the list stops at the first pass, because a passed course is not re-sat.
+ *
+ * Every write goes through this, so the stored form is canonical by
+ * construction and re-recording the same result — an F included — can never
+ * append a second copy of it.
+ */
+export function canonicalSittings(course, grades) {
+  const max = Math.max(1, course?.maxAttempts ?? 1);
+  const out = [];
+  for (const raw of grades ?? []) {
+    const g = normaliseGrade(raw);
+    if (g === NOT_ENTERED) continue;          // not a sitting
+    out.push(g);
+    if (out.length >= max) break;             // allowance spent
+    if (!isFailingGrade(course, g)) break;    // passed: never sat again
+  }
+  return out;
+}
+
+/** Write a canonical sitting list back into the state, first sitting first. */
+function writeSittings(state, course, list) {
+  const canon = canonicalSittings(course, list);
+  const grades = { ...state.grades };
+  const repeats = { ...(state.repeats ?? {}) };
+  if (canon.length === 0) {
+    delete grades[course.id];
+    delete repeats[course.id];
+  } else {
+    grades[course.id] = canon[0];
+    if (canon.length > 1) repeats[course.id] = canon.slice(1);
+    else delete repeats[course.id];
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
+ * Bring a whole state into canonical form.
+ *
+ * Applied to anything arriving from outside the engine — a record loaded from
+ * storage, or an imported file — so that a hand-edited or older file is tidied
+ * once rather than carried around. Entries for courses this curriculum does not
+ * contain are left untouched rather than discarded, since they may belong to a
+ * different curriculum version.
+ */
+export function canonicaliseState(courses, state) {
+  const known = new Set(courses.map((c) => c.id));
+  const grades = {};
+  const repeats = {};
+  for (const [id, g] of Object.entries(state?.grades ?? {})) {
+    if (!known.has(id)) { grades[id] = g; if (state?.repeats?.[id]) repeats[id] = state.repeats[id]; }
+  }
+  for (const course of courses) {
+    const raw = [state?.grades?.[course.id], ...(state?.repeats?.[course.id] ?? [])];
+    const canon = canonicalSittings(course, raw);
+    if (canon.length === 0) continue;
+    grades[course.id] = canon[0];
+    if (canon.length > 1) repeats[course.id] = canon.slice(1);
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
  * Every sitting of a course, in order, as a list of valid grades.
  *
  * The first sitting lives in `state.grades` and any repeats in `state.repeats`.
@@ -51,24 +120,10 @@ export function isFailingGrade(course, grade) {
  * blank the whole course is treated as not attempted.
  */
 export function attemptsOf(course, state) {
-  const first = normaliseGrade(state?.grades?.[course.id]);
-  if (first === NOT_ENTERED) return [];
+  const first = state?.grades?.[course.id];
+  if (normaliseGrade(first) === NOT_ENTERED) return [];
   const rest = Array.isArray(state?.repeats?.[course.id]) ? state.repeats[course.id] : [];
-  // Once a course is passed it cannot be taken again, so the sequence stops at
-  // the first pass. Anything recorded after it is disregarded rather than
-  // counted, which also means a hand-edited file cannot manufacture an extra
-  // sitting of a course that was already passed.
-  if (!isFailingGrade(course, first)) return [first];
-
-  const out = [first];
-  for (const r of rest) {
-    const g = normaliseGrade(r);
-    if (g === NOT_ENTERED) continue;
-    out.push(g);
-    if (out.length >= Math.max(1, course.maxAttempts ?? 1)) break;
-    if (!isFailingGrade(course, g)) break;   // passed: no further sitting
-  }
-  return out;
+  return canonicalSittings(course, [first, ...rest]);
 }
 
 /**
@@ -277,41 +332,35 @@ export function setGrade(state, id, value, course = null) {
  */
 export function setAttempt(state, course, index, value) {
   const id = typeof course === 'string' ? course : course.id;
-  if (index === 0) return setGrade(state, id, value, typeof course === 'string' ? null : course);
-
-  const max = Math.max(1, (typeof course === 'string' ? 1 : course.maxAttempts) ?? 1);
-  const grade = normaliseGrade(value);
-  const repeats = { ...(state.repeats ?? {}) };
-  const list = Array.isArray(repeats[id]) ? [...repeats[id]] : [];
-  const at = index - 1;
-
-  if (grade === NOT_ENTERED) {
-    if (at < list.length) list.splice(at, 1);
-  } else if (at < list.length) {
-    list[at] = grade;
-    // Recording a pass closes the course: any later sitting becomes impossible.
-    if (typeof course !== 'string' && !isFailingGrade(course, grade)) list.length = at + 1;
-  } else if (list.length + 1 < max) {
-    list.push(grade);          // +1 for the first sitting
-  } else {
-    return state;              // at the allowance: nothing changes
+  if (typeof course === 'string' || index === 0) {
+    if (index === 0) return setGrade(state, id, value, typeof course === 'string' ? null : course);
+    return state;
   }
 
-  if (list.length === 0) delete repeats[id];
-  else repeats[id] = list;
-  return { ...state, repeats };
+  const current = attemptsOf(course, state);
+  const grade = normaliseGrade(value);
+  const next = [...current];
+
+  if (index < next.length) {
+    if (grade === NOT_ENTERED) next.splice(index, 1);   // remove, closing the gap
+    else next[index] = grade;
+  } else if (grade !== NOT_ENTERED) {
+    next.push(grade);                                    // one more sitting
+  } else {
+    return state;                                        // blank into a blank slot
+  }
+
+  return writeSittings(state, course, next);
 }
 
 /** Append one more sitting, if the course's allowance has room for it. */
-export function addAttempt(state, course, value = NOT_ENTERED) {
-  const id = course.id;
-  const taken = Array.isArray(state.repeats?.[id]) ? state.repeats[id].length : 0;
-  if (!state.grades?.[id]) return state;                 // nothing sat yet
-  if (taken + 1 >= Math.max(1, course.maxAttempts ?? 1)) return state;
-  if (!evaluateCourse(course, state).canAddAttempt) return state;   // already passed
-  const repeats = { ...(state.repeats ?? {}) };
-  repeats[id] = [...(repeats[id] ?? []), normaliseGrade(value)];
-  return { ...state, repeats };
+export function addAttempt(state, course, value) {
+  const grade = normaliseGrade(value);
+  if (grade === NOT_ENTERED) return state;               // a blank is not a sitting
+  const current = attemptsOf(course, state);
+  if (current.length === 0) return state;                // nothing sat yet
+  if (!evaluateCourse(course, state).canAddAttempt) return state;   // passed, or allowance spent
+  return writeSittings(state, course, [...current, grade]);
 }
 
 /** Drop every repeat of a course, keeping the first sitting. */

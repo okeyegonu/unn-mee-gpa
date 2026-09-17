@@ -459,7 +459,10 @@ function refreshAll() {
                    : `Grade for ${ref.course.code}`);
       const wrap = sel.closest('.attempt');
       wrap.classList.toggle('numbered', wanted > 1);
-      wrap.classList.toggle('pending', !g);
+      // The dashed "sit it again" styling belongs only to the trailing box of a
+      // course being repeated. An ordinary ungraded course must look exactly as
+      // it always has.
+      wrap.classList.toggle('pending', !g && wanted > 1);
     });
     ref.stack.classList.toggle('multi', wanted > 1);
     ref.stack.title = ev.passed && ev.attemptCount > 1

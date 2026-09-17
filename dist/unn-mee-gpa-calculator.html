@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-17T22:28:06.648Z by tools/build-single-file.mjs.
+  Built 2026-09-17T22:34:37.909Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -1895,7 +1895,10 @@ function refreshAll() {
                    : `Grade for ${ref.course.code}`);
       const wrap = sel.closest('.attempt');
       wrap.classList.toggle('numbered', wanted > 1);
-      wrap.classList.toggle('pending', !g);
+      // The dashed "sit it again" styling belongs only to the trailing box of a
+      // course being repeated. An ordinary ungraded course must look exactly as
+      // it always has.
+      wrap.classList.toggle('pending', !g && wanted > 1);
     });
     ref.stack.classList.toggle('multi', wanted > 1);
     ref.stack.title = ev.passed && ev.attemptCount > 1

@@ -89,6 +89,31 @@ try {
 
   let s = await readSummary();
   check('no boot error is shown', s.bootErrorShown === false);
+
+  // The plain interface, for a student who passes everything first time, must
+  // be exactly what it always was: one grade box per course and no repeat
+  // machinery anywhere on the page.
+  const plain = await exec(`
+    var counts = Array.from(document.querySelectorAll('tr[data-id]'))
+      .map(function (tr) { return tr.querySelectorAll('select.grade').length; });
+    var row = document.querySelector('tr[data-id="y1s1-MTH101"]');
+    return {
+      distinctBoxCounts: Array.from(new Set(counts)),
+      repeatsOff: document.getElementById('toggle-repeats').checked === false,
+      precisionOff: document.getElementById('toggle-precision').checked === false,
+      badges: row.querySelectorAll('.attempt.numbered').length,
+      dashed: row.querySelectorAll('.attempt.pending').length,
+      unitsSub: row.querySelectorAll('.cell-units .sub').length,
+      attemptsNote: document.getElementById('stat-attempts').textContent.trim()
+    };
+  `);
+  check('every course shows exactly one grade box by default',
+    plain.distinctBoxCounts.length === 1 && plain.distinctBoxCounts[0] === 1,
+    `counts seen: ${plain.distinctBoxCounts.join(',')}`);
+  check('both optional switches start off', plain.repeatsOff && plain.precisionOff);
+  check('no sitting numbers, dashed boxes or "x n" clutter on an ordinary row',
+    plain.badges === 0 && plain.dashed === 0 && plain.unitsSub === 0 && plain.attemptsNote === '',
+    JSON.stringify(plain));
   check('an empty calculator shows no GPA', s.gpa === '—' && s.courses === '0' && s.units === '0', JSON.stringify(s));
 
   // --- Monday: one result. MTH 101 is 2 units. ---

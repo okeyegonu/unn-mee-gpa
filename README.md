@@ -138,6 +138,12 @@ year at once. The allowance is resolved onto each course as `maxAttempts` while
 the curriculum is flattened, so the GPA engine enforces it without ever looking
 at a year.
 
+**The plain interface is the default and stays untouched.** A student who passes
+everything first time sees exactly what the first version showed: one grade box
+per course, no sitting numbers, no dashed boxes, no `× n` on the units, and no
+mention of sittings in the summary. Nothing about repeats appears until it is
+asked for, and the browser suite asserts that on every run.
+
 **In the interface.** An **I repeated a course** checkbox in the toolbar turns
 on a grade box per sitting. Each sitting is numbered, and a dashed box is always
 offered for the next one until the allowance is reached. A course with repeats

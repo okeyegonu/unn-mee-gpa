@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" fill="#0b6b3a"/>
+  <text x="96" y="86" font-family="system-ui, sans-serif" font-size="52" font-weight="700"
+        fill="#ffffff" text-anchor="middle">GPA</text>
+  <text x="96" y="136" font-family="system-ui, sans-serif" font-size="30" font-weight="500"
+        fill="#a9d8bd" text-anchor="middle">UNN</text>
+</svg>

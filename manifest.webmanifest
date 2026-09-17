@@ -1,0 +1,19 @@
+{
+  "name": "UNN Mechanical Engineering GPA Calculator",
+  "short_name": "UNN MEE GPA",
+  "description": "Incremental GPA calculator for the B.Eng. Mechanical Engineering programme, University of Nigeria, Nsukka.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f6f9",
+  "theme_color": "#16191d",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

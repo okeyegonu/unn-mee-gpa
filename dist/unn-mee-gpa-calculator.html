@@ -1,0 +1,1532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#16191d">
+<meta name="description" content="Incremental GPA calculator for the B.Eng. Mechanical Engineering programme, University of Nigeria, Nsukka.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6b3a'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EGP%3C/text%3E%3C/svg%3E">
+<!--
+  UNN Mechanical Engineering GPA Calculator — single-file build.
+  Curriculum unn-mee-beng-5yr version 2023.1.
+  Built 2026-09-17T19:23:28.843Z by tools/build-single-file.mjs.
+  Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
+  stay in your own browser.
+-->
+<title>UNN Mechanical Engineering — GPA Calculator</title>
+<style>
+:root {
+  --ink: #16191d;
+  --ink-soft: #55606d;
+  --ink-faint: #8a94a2;
+  --rule: #dfe3e9;
+  --rule-soft: #ecf0f4;
+  --paper: #ffffff;
+  --ground: #f4f6f9;
+  --accent: #0b6b3a;
+  --accent-soft: #e8f3ec;
+  --warn: #8a5a00;
+  --warn-soft: #fdf3dc;
+  --danger: #a32020;
+  --danger-soft: #fbeaea;
+  --radius: 8px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+main { max-width: 1120px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ---------- masthead ---------- */
+.masthead { background: var(--ink); color: #fff; }
+.masthead-inner {
+  max-width: 1120px; margin: 0 auto; padding: 18px 20px;
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: space-between;
+}
+.masthead h1 { margin: 0; font-size: 20px; letter-spacing: .01em; }
+.masthead .sub { margin: 4px 0 0; font-size: 13.5px; color: #c6ccd4; }
+.masthead .meta { margin: 6px 0 0; font-size: 12px; color: #98a2ae; font-family: var(--mono); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button {
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px;
+  border: 1px solid #454d57; background: #262b31; color: #eef1f4; cursor: pointer;
+}
+.actions button:hover { background: #333a42; }
+.actions button.danger { border-color: #7a3a3a; color: #ffd9d9; }
+.actions button.danger:hover { background: #4a2626; }
+
+/* ---------- sticky summary ---------- */
+.summary-bar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); box-shadow: 0 1px 3px rgba(16,20,26,.06); }
+.summary-inner {
+  max-width: 1120px; margin: 0 auto; padding: 12px 20px;
+  display: flex; flex-wrap: wrap; gap: 28px; align-items: baseline;
+}
+.stat { display: flex; flex-direction: column; gap: 1px; }
+.stat-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.stat-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-primary .stat-value { font-size: 30px; color: var(--accent); line-height: 1.1; }
+.stat-note { font-size: 11.5px; color: var(--ink-soft); }
+.save-state { margin-left: auto; font-size: 12px; color: var(--ink-faint); align-self: center; }
+
+/* ---------- notices ---------- */
+.notice { border-radius: var(--radius); padding: 12px 14px; margin: 0 0 16px; font-size: 14px; border: 1px solid; }
+.notice.error { background: var(--danger-soft); border-color: #e7bcbc; color: #6d1a1a; }
+.notice.warn { background: var(--warn-soft); border-color: #ecd9a8; color: var(--warn); }
+.notice code { font-family: var(--mono); font-size: 13px; }
+
+/* ---------- toolbar ---------- */
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field span { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.field input {
+  font: inherit; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 6px;
+  min-width: 260px; background: #fff; color: inherit;
+}
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-soft); }
+.yearnav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.yearnav a {
+  font-size: 12.5px; padding: 5px 10px; border-radius: 999px; text-decoration: none;
+  color: var(--ink-soft); border: 1px solid var(--rule); background: #fbfcfd;
+}
+.yearnav a:hover { border-color: var(--accent); color: var(--accent); }
+
+.rule-note {
+  background: var(--accent-soft); border: 1px solid #cfe5d8; color: #15492c;
+  padding: 12px 14px; border-radius: var(--radius); font-size: 13.5px; margin: 0 0 20px;
+}
+
+/* ---------- year / semester ---------- */
+.year { margin-bottom: 26px; scroll-margin-top: 96px; }
+.year > h2 {
+  margin: 0 0 10px; font-size: 15px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-soft); border-bottom: 2px solid var(--ink); padding-bottom: 6px;
+}
+.semester {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  margin-bottom: 12px; overflow: hidden;
+}
+.semester > header {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between;
+  padding: 10px 14px; background: #fafbfc; border-bottom: 1px solid var(--rule);
+}
+.semester h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.semester .sem-summary { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.semester .sem-summary b { color: var(--accent); font-size: 14px; }
+
+.group-head {
+  padding: 8px 14px; font-size: 12.5px; color: var(--ink-soft);
+  background: #fcfdfe; border-bottom: 1px solid var(--rule-soft);
+}
+.group-head strong { color: var(--ink); }
+.group-head.elective { background: var(--warn-soft); color: var(--warn); border-bottom-color: #ecd9a8; }
+
+/* ---------- course table ---------- */
+table.courses { width: 100%; border-collapse: collapse; }
+table.courses th, table.courses td { padding: 7px 14px; text-align: left; border-bottom: 1px solid var(--rule-soft); }
+table.courses thead th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint);
+  font-weight: 600; background: #fff;
+}
+table.courses tbody tr:last-child td { border-bottom: none; }
+table.courses tr.active { background: var(--accent-soft); }
+table.courses tr.blocked { background: var(--warn-soft); }
+table.courses tr.hidden { display: none; }
+.c-code { font-family: var(--mono); font-size: 13px; white-space: nowrap; font-weight: 600; }
+.c-title { color: var(--ink-soft); }
+.c-title .unknown { color: var(--ink-faint); font-style: italic; }
+.c-note { display: block; font-size: 11.5px; color: var(--warn); margin-top: 2px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.num { font-family: var(--mono); font-size: 13px; }
+.dash { color: var(--ink-faint); }
+select.grade {
+  font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid var(--rule);
+  border-radius: 5px; background: #fff; color: inherit;
+  /* Sized for a finger, not just a mouse: comfortable on tablets too. */
+  min-width: 68px; min-height: 40px;
+}
+select.grade.set { border-color: var(--accent); font-weight: 600; color: var(--accent); }
+select.grade.set[data-grade="F"] { border-color: var(--danger); color: var(--danger); }
+input.units-input {
+  font: inherit; font-size: 13px; width: 56px; padding: 3px 6px; text-align: right;
+  border: 1px solid #d8bd7e; border-radius: 5px; background: #fff;
+}
+.legacy { font-size: 11px; color: var(--ink-faint); font-family: var(--mono); }
+
+/* ---------- year totals ---------- */
+.totals-panel { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; margin-top: 28px; }
+.totals-panel h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
+table.totals { width: 100%; border-collapse: collapse; }
+table.totals th, table.totals td { padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+table.totals thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); }
+table.totals tfoot th, table.totals tfoot td { border-top: 2px solid var(--ink); border-bottom: none; padding-top: 10px; font-weight: 600; }
+table.totals td.num { font-family: var(--mono); font-size: 13px; }
+table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; }
+
+.colophon { margin-top: 28px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; }
+.colophon code { font-family: var(--mono); }
+
+/* ================================================================
+   Small screens — Firefox and Chrome on Android, Safari/Chrome on iOS.
+
+   Under 760px the six-column course table is re-laid out as a stack of
+   cards, one per course, using CSS grid areas. Nothing about the markup
+   or the calculation changes: only the presentation does.
+   ================================================================ */
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+
+  main { padding: 16px 12px calc(56px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---- masthead ---- */
+  .masthead-inner {
+    padding: 14px 14px;
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+    flex-direction: column; gap: 12px;
+  }
+  .masthead h1 { font-size: 18px; }
+  .masthead .sub { font-size: 12.5px; }
+  .masthead .meta { font-size: 11px; }
+  .actions { width: 100%; }
+  .actions button { flex: 1 1 0; min-height: 40px; font-size: 13px; padding: 8px 10px; }
+
+  /* ---- sticky summary: GPA large, the rest on one compact line ---- */
+  .summary-inner {
+    padding: 10px 14px;
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+    gap: 6px 18px; align-items: center;
+  }
+  .stat-primary { flex: 1 0 100%; flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .stat-primary .stat-label { order: 1; }
+  .stat-primary .stat-value { order: 0; font-size: 34px; }
+  .stat-primary .stat-note { order: 2; flex: 1 0 100%; }
+  .stat:not(.stat-primary) { flex-direction: row; align-items: baseline; gap: 6px; }
+  .stat:not(.stat-primary) .stat-label { font-size: 10.5px; }
+  .stat:not(.stat-primary) .stat-value { font-size: 15px; }
+  .save-state { flex: 1 0 100%; margin-left: 0; font-size: 11px; }
+
+  /* ---- toolbar ---- */
+  .toolbar { padding: 12px; gap: 12px; }
+  .field, .field input { width: 100%; min-width: 0; }
+  .field input { min-height: 42px; font-size: 16px; }   /* 16px stops iOS zooming in */
+  .check { width: 100%; min-height: 34px; }
+  .check input { width: 20px; height: 20px; }
+  .yearnav { margin-left: 0; width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .yearnav a { white-space: nowrap; min-height: 36px; display: flex; align-items: center; }
+
+  .rule-note { font-size: 13px; padding: 11px 12px; }
+
+  /* ---- year / semester chrome ---- */
+  .year { scroll-margin-top: 130px; }
+  .semester > header { padding: 10px 12px; gap: 4px; flex-direction: column; align-items: flex-start; }
+  .semester .sem-summary { font-size: 12px; }
+  .group-head { padding: 8px 12px; font-size: 12px; }
+
+  /* ---- each course row becomes a card ---- */
+  table.courses thead { display: none; }
+  table.courses,
+  table.courses tbody,
+  table.courses tr,
+  table.courses td { display: block; width: 100%; }
+
+  table.courses tr {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      "code  code code grade"
+      "title title title grade"
+      "units gp   pt   grade";
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  table.courses tr.hidden { display: none; }
+  table.courses td { padding: 0; border: none; text-align: left; }
+
+  td.c-code   { grid-area: code;  font-size: 14px; }
+  td.c-code .legacy { display: inline; margin-left: 8px; }
+  td.c-title  { grid-area: title; font-size: 13px; line-height: 1.35; }
+  td.c-title .c-note { margin-top: 3px; }
+  td.cell-units { grid-area: units; }
+  td.cell-gp    { grid-area: gp; }
+  td.cell-pt    { grid-area: pt; }
+  td.cell-grade { grid-area: grade; justify-self: end; }
+
+  /* label the bare numbers, since the column headings are gone */
+  td.cell-units::before,
+  td.cell-gp::before,
+  td.cell-pt::before {
+    content: attr(data-label) " ";
+    font-family: system-ui, sans-serif;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+    margin-right: 3px;
+  }
+  td.cell-units, td.cell-gp, td.cell-pt {
+    font-size: 13px; margin-top: 4px; white-space: nowrap; text-align: left;
+  }
+
+  /* comfortable tap targets; 16px text so mobile Safari/Chrome do not zoom */
+  select.grade {
+    font-size: 16px; min-height: 46px; min-width: 76px; padding: 6px 8px; text-align: center;
+  }
+  input.units-input { font-size: 16px; min-height: 36px; width: 68px; }
+
+  /* ---- year totals ---- */
+  .totals-panel { padding: 12px; }
+  table.totals { min-width: 460px; }
+  table.totals th, table.totals td { padding: 8px 8px; font-size: 13px; }
+  table.totals tfoot th { font-size: 12.5px; }
+
+  .notice { font-size: 13px; }
+  .colophon { font-size: 11.5px; }
+}
+
+/* Very narrow phones (iPhone SE and similar). */
+@media (max-width: 400px) {
+  table.courses tr { column-gap: 10px; }
+  .stat-primary .stat-value { font-size: 30px; }
+  select.grade { min-width: 70px; }
+  td.c-code .legacy { display: block; margin-left: 0; }
+}
+
+/* Coarse pointers: keep every control at least 44px tall regardless of width. */
+@media (pointer: coarse) {
+  select.grade { min-height: 44px; }
+  .actions button { min-height: 44px; }
+  .yearnav a { min-height: 38px; }
+}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="titles">
+      <h1>GPA Calculator</h1>
+      <p class="sub">Department of Mechanical Engineering &middot; University of Nigeria, Nsukka</p>
+      <p class="meta" id="curriculum-meta"></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-export">Export results</button>
+      <button type="button" id="btn-import">Import results</button>
+      <button type="button" id="btn-reset" class="danger">Reset results</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </div>
+</header>
+
+<div class="summary-bar" id="summary-bar">
+  <div class="summary-inner">
+    <div class="stat stat-primary">
+      <span class="stat-label">Current GPA</span>
+      <span class="stat-value" id="stat-gpa">—</span>
+      <span class="stat-note" id="stat-class"></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Graded courses</span>
+      <span class="stat-value" id="stat-courses">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Activated units</span>
+      <span class="stat-value" id="stat-units">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Total quality points</span>
+      <span class="stat-value" id="stat-points">0</span>
+    </div>
+    <div class="save-state" id="save-state" aria-live="polite"></div>
+  </div>
+</div>
+
+<main>
+  <div id="boot-error" class="notice error" hidden></div>
+  <div id="version-notice" class="notice warn" hidden></div>
+
+  <section class="toolbar">
+    <label class="field">
+      <span>Find a course</span>
+      <input type="search" id="filter-text" placeholder="e.g. MEE 313, thermodynamics">
+    </label>
+    <label class="check">
+      <input type="checkbox" id="filter-entered">
+      <span>Show only courses I have graded</span>
+    </label>
+    <nav class="yearnav" id="yearnav" aria-label="Jump to year"></nav>
+  </section>
+
+  <p class="rule-note">
+    A course joins the GPA <strong>only</strong> when you choose a grade for it. Leaving a course at
+    <strong>&mdash;</strong> keeps it dormant: it contributes no units and no points. A grade of
+    <strong>F</strong> is different &mdash; it scores 0 points but its units still count towards the denominator.
+    You may enter any result, in any year or semester, in any order.
+  </p>
+
+  <div id="curriculum-root"></div>
+
+  <section class="totals-panel">
+    <h2>Summary by academic year</h2>
+    <div class="table-scroll">
+    <table class="totals" id="year-totals">
+      <thead>
+        <tr><th>Year</th><th class="num">Graded</th><th class="num">Units</th><th class="num">Points</th><th class="num">Year GPA</th></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <th>Cumulative (all entered results)</th>
+          <td class="num" id="cum-courses">0</td>
+          <td class="num" id="cum-units">0</td>
+          <td class="num" id="cum-points">0</td>
+          <td class="num strong" id="cum-gpa">—</td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+  </section>
+
+  <footer class="colophon" id="colophon"></footer>
+</main>
+
+<script type="module">
+window.__UNN_CURRICULUM__ = {"schema_version":"1.0","curriculum_id":"unn-mee-beng-5yr","curriculum_version":"2023.1","institution":"University of Nigeria, Nsukka","faculty":"Faculty of Engineering","department":"Department of Mechanical Engineering","programme":"Mechanical Engineering","award":"B.Eng.","programme_track":"Five-Year Undergraduate Programme","grade_scale":{"A":5,"B":4,"C":3,"D":2,"E":1,"F":0},"sources":[{"source_id":"jpeg-first-year","document":"FIRST-YEAR-2026-09-17-18.30.34.jpeg","description":"UNN Dept. of Mechanical Engineering 'CGPA Result Pre-Computation Form', First Year block. The printed form carries the older course codes; handwritten annotations strike those out and supply the revised First Year codes and unit loads. The handwritten revision is treated as authoritative for First Year.","applies_to":["year 1"]},{"source_id":"pdf-bachelors-2023","document":"BACHELORS-PROGRAMME-14-JAN-2023-FINAL.pdf","description":"Section 2.1 'Five - Year Undergraduate Programme', sub-sections 2.1.2 to 2.1.5, printed pages 26 to the upper portion of page 30.","applies_to":["year 2","year 3","year 4","year 5"]}],"amendments":[{"date":"2026-09-17","change":"Unit loads for PHY 104 (2) and STA 112 (3) supplied by the department; the source form leaves both blank.","affects":["y1s2-PHY104","y1s2-STA112"]}],"provenance_note":"First Year is taken from the handwritten revision of the pre-computation form; Years 2-5 are taken from the 2023 bachelors programme document, which still prints the older First Year codes. The two sources therefore belong to different revisions of the same programme. Years 2-5 are reproduced exactly as printed and have not been re-coded to match the revised First Year numbering.","years":[{"year":1,"label":"First Year","semesters":[{"semester":1,"label":"First Semester","source_id":"jpeg-first-year","printed_total_units":21,"stated_total_units":16,"groups":[{"group_id":"y1s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MTH 101","title":"Elementary Mathematics I","units":2,"category":"Required Ancillary","legacy_code":"MTH 111","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"MTH 103","title":"Elementary Mathematics II","units":2,"category":"Required Ancillary","legacy_code":"MTH 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"CHM 101","title":"Basic Principles of Chemistry I","units":2,"category":"Required Ancillary","title_source":"source_document"},{"code":"CHM 107","title":"Basic Practical Chemistry","units":1,"category":"Required Ancillary","legacy_code":"CHM 171","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 101","title":"Fundamentals of Physics I","units":2,"category":"Required Ancillary","legacy_code":"PHY 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"PHY 107","title":"Practical Physics II","units":1,"category":"Required Ancillary","legacy_code":"PHY 195","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"GST 111","title":"Use of English","units":1,"category":"General Studies","legacy_code":"GSP 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"MEE 101","title":"Introduction to Engineering","units":2,"category":"Major","legacy_code":"ENGR 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 103","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."},{"code":"GET 101","title":null,"units":1,"category":"Major","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."}]}],"removed_from_earlier_revision":[{"code":"GSP 111","title":"The Use of Library and Study Skills","units":2,"notes":"Struck out on the form with no replacement."}]},{"semester":2,"label":"Second Semester","source_id":"jpeg-first-year","printed_total_units":17,"stated_total_units":16,"total_units_source":"computed_after_department_supplied_the_two_missing_unit_loads","groups":[{"group_id":"y1s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"PHY 104","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 2 units was supplied by the department."},{"code":"STA 112","title":null,"units":3,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 3 units was supplied by the department."},{"code":"CHM 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GST 114","title":null,"units":1,"category":"General Studies","title_unknown":true},{"code":"CHM 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"MTH 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GET 102","title":null,"units":2,"category":"Major","title_unknown":true}]}],"superseded_printed_list":[{"code":"MTH 122","title":"Elementary Mathematics III","units":3},{"code":"CHM 112","title":"Basic Principles of Chemistry II","units":2},{"code":"CHM 122","title":"Basic Principles of Organic Chemistry","units":2},{"code":"PHY 116","title":"General Physics for Physical Science II","units":2},{"code":"PHY 124","title":"Fundamentals of Physics III","units":3},{"code":"GSP 102","title":"Use of English II","units":2},{"code":"ENGR 102","title":"Applied Mechanics","units":3}]}]},{"year":2,"label":"Second Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"groups":[{"group_id":"y2s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 211","title":"Engineering Drawing I","units":2,"category":"Major"},{"code":"MEE 261","title":"Engineering Thermodynamics I","units":2,"category":"Major"},{"code":"EGR 201","title":"Materials Science","units":2,"category":"Required Ancillary"},{"code":"EGR 203","title":"Materials Science Laboratory","units":1,"category":"Required Ancillary"},{"code":"CVE 211","title":"Strength of Materials I","units":2,"category":"Required Ancillary"},{"code":"CVE 213","title":"Strength of Materials Laboratory I","units":1,"category":"Required Ancillary"},{"code":"EEE 211","title":"Basic Electrical Engineering","units":3,"category":"Required Ancillary"},{"code":"MTH 207","title":"Advanced Mathematics VII","units":2,"category":"Required Ancillary"},{"code":"GSP 201","title":"The Social Sciences","units":2,"category":"General Studies"},{"code":"GSP 207","title":"Logic, Philosophy and Human Existence","units":2,"category":"General Studies"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"groups":[{"group_id":"y2s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 202","title":"Computing and Programming for Mechanical Engineers","units":3,"category":"Major"},{"code":"MEE 204","title":"Computing and Programming Laboratory","units":1,"category":"Major"},{"code":"MEE 212","title":"Workshop Technology","units":2,"category":"Major"},{"code":"CVE 222","title":"Fluid Mechanics I","units":2,"category":"Required Ancillary"},{"code":"CVE 224","title":"Fluid Mechanics Laboratory","units":1,"category":"Required Ancillary"},{"code":"EEE 252","title":"Basic Electrical Engineering Lab/Practice","units":1,"category":"Required Ancillary"},{"code":"MTH 206","title":"Advanced Mathematics VI","units":2,"category":"Required Ancillary"},{"code":"MTH 208","title":"Advanced Mathematics VIII","units":2,"category":"Required Ancillary"},{"code":"GSP 202","title":"Issues in Peace and Conflict Resolution Studies","units":2,"category":"General Studies"},{"code":"GSP 208","title":"Nigerian Peoples and Culture","units":2,"category":"General Studies"}]}]}]},{"year":3,"label":"Third Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 311","title":"Manufacturing Processes","units":2,"category":"Major"},{"code":"MEE 313","title":"Mechanical Engineering Design I","units":3,"category":"Major"},{"code":"MEE 315","title":"Workshop Practice","units":1,"category":"Major"},{"code":"MEE 321","title":"Thermo-Fluids Laboratory I","units":1,"category":"Major"},{"code":"MEE 323","title":"Mechanics of Machines Laboratory I","units":1,"category":"Major"},{"code":"MEE 341","title":"Mechanics of Machines I","units":2,"category":"Major"},{"code":"MEE 343","title":"Measurement and Instrumentation","units":2,"category":"Major"},{"code":"MEE 351","title":"Mechanics of Fluids","units":2,"category":"Major"},{"code":"MEE 361","title":"Engineering Thermodynamics II","units":2,"category":"Major"},{"code":"CED 341","title":"Introduction to Entrepreneurship I","units":2,"category":"Required Ancillary"},{"code":"STA 205","title":"Statistics for Physical Sciences and Engineering I","units":2,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 312","title":"Computer-Aided Design and Manufacture","units":2,"category":"Major"},{"code":"MEE 314","title":"Engineering Drawing II","units":2,"category":"Major"},{"code":"MEE 322","title":"Mechanics of Materials Laboratory","units":1,"category":"Major"},{"code":"MEE 324","title":"CAD/CAM Laboratory","units":1,"category":"Major"},{"code":"MEE 332","title":"Mechanics of Materials I","units":3,"category":"Major"},{"code":"MEE 372","title":"Heat and Mass Transfer I","units":2,"category":"Major"},{"code":"CED 342","title":"Introduction to Entrepreneurship II","units":2,"category":"Required Ancillary"},{"code":"EEE 312","title":"Electrical Engineering II","units":3,"category":"Required Ancillary"},{"code":"EGR 302","title":"Engineering Analysis","units":4,"category":"Required Ancillary"}]}]}]},{"year":4,"label":"Fourth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":22,"stated_total_units":22,"groups":[{"group_id":"y4s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 413","title":"Mechanical Engineering Design II","units":3,"category":"Major"},{"code":"MEE 421","title":"Thermo-Fluids Laboratory II","units":1,"category":"Major"},{"code":"MEE 423","title":"Mechanics of Machines Laboratory II","units":1,"category":"Major"},{"code":"MEE 425","title":"Heat and Mass Transfer Laboratory","units":1,"category":"Major"},{"code":"MEE 441","title":"Mechanics of Machines II","units":2,"category":"Major"},{"code":"MEE 443","title":"Automatic Control","units":3,"category":"Major"},{"code":"MEE 451","title":"Applied Fluid Mechanics","units":2,"category":"Major"},{"code":"MEE 461","title":"Engineering Thermodynamics III","units":2,"category":"Major"},{"code":"MEE 471","title":"Heat and Mass Transfer II","units":2,"category":"Major"},{"code":"MEE 481","title":"Technology Development Policy","units":2,"category":"Major"},{"code":"EGR 401","title":"Computational Methods","units":3,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":15,"stated_total_units":15,"groups":[{"group_id":"y4s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 402","title":"Written Technical Communication","units":2,"category":"Major"},{"code":"MEE 404","title":"Seminar Presentation Skills","units":1,"category":"Major"},{"code":"MEE 412","title":"Computer Aided Design Practice","units":2,"category":"Major"},{"code":"EGR 402","title":"SIWES","units":10,"category":"Required Ancillary"}]}]}]},{"year":5,"label":"Fifth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"elective_rule":"Two (2) elective courses (6 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 511","title":"Applied Design","units":3,"category":"Major"},{"code":"MEE 531","title":"Mechanics of Materials II","units":3,"category":"Major"},{"code":"MEE 551","title":"Fluid Dynamics","units":3,"category":"Major"},{"code":"MEE 561","title":"Engineering Thermodynamics IV","units":3,"category":"Major"}]},{"group_id":"y5s1-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 555","title":"Aerospace Engineering Fundamentals","units":3,"category":"Elective"},{"code":"MEE 557","title":"Fluid Power Transmission Systems","units":3,"category":"Elective"},{"code":"MEE 563","title":"Automotive Engine Fundamentals","units":3,"category":"Elective"},{"code":"MEE 565","title":"Fundamentals of Nuclear Engineering","units":3,"category":"Elective"},{"code":"MEE 569","title":"Direct Energy Conversion Principles","units":3,"category":"Elective"},{"code":"MEE 572","title":"Thermal Engineering and Advanced Heat Transfer","units":3,"category":"Elective"}]},{"group_id":"y5s1-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 513","title":"Manufacturing and Tools Engineering","units":3,"category":"Elective"},{"code":"MEE 515","title":"Design of Welded and Cast Structures","units":3,"category":"Elective"},{"code":"MEE 533","title":"Engineering Metallurgy","units":3,"category":"Elective"},{"code":"MEE 541","title":"Systems Engineering","units":3,"category":"Elective"},{"code":"MEE 543","title":"Vibrations and Control","units":3,"category":"Elective"},{"code":"MEE 545","title":"Mechatronics","units":3,"category":"Elective"},{"code":"MEE 547","title":"Automobile Engineering","units":3,"category":"Elective"},{"code":"MEE 581","title":"Quality Assurance and Reliability","units":3,"category":"Elective"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"elective_rule":"One (1) elective course (3 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 534","title":"Materials for Engineering Applications","units":3,"category":"Major"},{"code":"MEE 582","title":"Engineering Law","units":2,"category":"Major"},{"code":"MEE 584","title":"Engineering Management","units":2,"category":"Major"},{"code":"MEE 586","title":"Engineering Economy","units":3,"category":"Major"},{"code":"MEE 592","title":"B.Eng. Project","units":6,"category":"Major"}]},{"group_id":"y5s2-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 552","title":"Computational Fluid Dynamics","units":3,"category":"Elective"},{"code":"MEE 562","title":"Refrigeration and Air-Conditioning","units":3,"category":"Elective"},{"code":"MEE 568","title":"Power Plant Engineering","units":3,"category":"Elective"}]},{"group_id":"y5s2-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 512","title":"Design of Pressure Vessels","units":3,"category":"Elective"},{"code":"MEE 532","title":"Theory of Elasticity","units":3,"category":"Elective"},{"code":"MEE 536","title":"Introduction to Composite Materials","units":3,"category":"Elective"}]}]}]}]};
+
+/* ======== src/grading.js ======== */
+/**
+ * grading.js — the grading rules, and nothing else.
+ *
+ * This module is deliberately free of curriculum knowledge, DOM knowledge and
+ * storage knowledge. Changing the institution's grade scale should require a
+ * change here only.
+ */
+
+/** Fixed UNN alphabetic grade -> grade point mapping. */
+const GRADE_POINTS = Object.freeze({
+  A: 5,
+  B: 4,
+  C: 3,
+  D: 2,
+  E: 1,
+  F: 0,
+});
+
+/** The ordered list of grades a student may choose. */
+const GRADES = Object.freeze(Object.keys(GRADE_POINTS));
+
+/**
+ * The sentinel meaning "no result entered yet".
+ * NOTE: this is NOT the same thing as the grade "F".
+ *   - NOT_ENTERED -> the course is dormant: 0 units, 0 points.
+ *   - "F"         -> the course is active: 0 points, but its units COUNT.
+ */
+const NOT_ENTERED = null;
+
+/** Normalise user input to a canonical grade, or NOT_ENTERED. */
+function normaliseGrade(value) {
+  if (value === undefined || value === null) return NOT_ENTERED;
+  const g = String(value).trim().toUpperCase();
+  if (g === '' || g === '-' || g === '—' || g === '--') return NOT_ENTERED;
+  return Object.prototype.hasOwnProperty.call(GRADE_POINTS, g) ? g : NOT_ENTERED;
+}
+
+/** True only for a valid alphabetic grade A-F. */
+function isValidGrade(value) {
+  if (typeof value !== 'string') return false;
+  return Object.prototype.hasOwnProperty.call(GRADE_POINTS, value.toUpperCase());
+}
+
+/** Grade point for a grade; null when no valid grade is supplied. */
+function gradePoint(grade) {
+  const g = normaliseGrade(grade);
+  return g === NOT_ENTERED ? null : GRADE_POINTS[g];
+}
+
+/**
+ * Quality point (course point) = course unit x grade point.
+ * Returns null when the course is not active (no valid grade, or unknown units).
+ */
+function coursePoint(units, grade) {
+  const gp = gradePoint(grade);
+  if (gp === null) return null;
+  if (!Number.isFinite(units)) return null;
+  return units * gp;
+}
+
+/**
+ * The precomputed course/grade template of section 5: every possible outcome
+ * for a course of the given unit load, including the inactive state.
+ */
+function gradeMatrixForUnits(units) {
+  const rows = [{ grade: NOT_ENTERED, label: '—', active: false, gradePoint: null, coursePoint: null }];
+  for (const g of GRADES) {
+    rows.push({
+      grade: g,
+      label: g,
+      active: true,
+      gradePoint: GRADE_POINTS[g],
+      coursePoint: Number.isFinite(units) ? units * GRADE_POINTS[g] : null,
+    });
+  }
+  return rows;
+}
+
+/** Build the template for every distinct unit load occurring in a curriculum. */
+function buildGradeTemplates(unitValues) {
+  const table = {};
+  for (const u of new Set(unitValues)) {
+    if (Number.isFinite(u)) table[u] = gradeMatrixForUnits(u);
+  }
+  return table;
+}
+
+/** Classification commonly used alongside the 5-point scale. Display only. */
+function classOfDegree(gpa) {
+  if (gpa === null || gpa === undefined) return null;
+  if (gpa >= 4.5) return 'First Class';
+  if (gpa >= 3.5) return 'Second Class (Upper Division)';
+  if (gpa >= 2.4) return 'Second Class (Lower Division)';
+  if (gpa >= 1.5) return 'Third Class';
+  if (gpa >= 1.0) return 'Pass';
+  return 'Fail';
+}
+
+/* ======== src/curriculum.js ======== */
+/**
+ * curriculum.js — turns the curriculum *data* into a flat, indexed course list.
+ *
+ * The GPA engine never sees the nested year/semester/group shape; it only ever
+ * sees a flat array of course records. That is what keeps year and semester
+ * purely presentational.
+ */
+
+/** Stable unique id for a course: year + semester + course code. */
+function courseId(year, semester, code) {
+  return `y${year}s${semester}-${String(code).replace(/\s+/g, '').toUpperCase()}`;
+}
+
+/**
+ * Flatten a curriculum document into course records.
+ * Year / semester / group are carried along as *metadata only*.
+ */
+function flattenCurriculum(doc) {
+  const out = [];
+  let order = 0;
+  for (const year of doc.years ?? []) {
+    for (const sem of year.semesters ?? []) {
+      for (const group of sem.groups ?? []) {
+        for (const c of group.courses ?? []) {
+          out.push({
+            id: courseId(year.year, sem.semester, c.code),
+            code: c.code,
+            title: c.title ?? null,
+            titleUnknown: c.title_unknown === true || c.title == null,
+            units: Number.isFinite(c.units) ? c.units : null,
+            unitsUnknown: c.units_unknown === true || !Number.isFinite(c.units),
+            category: c.category ?? null,
+            year: year.year,
+            yearLabel: year.label,
+            semester: sem.semester,
+            semesterLabel: sem.label,
+            groupId: group.group_id,
+            groupLabel: group.label,
+            groupType: group.type,
+            groupChoose: group.choose ?? null,
+            groupNote: group.note ?? null,
+            legacyCode: c.legacy_code ?? null,
+            legacyUnits: c.legacy_units ?? null,
+            notes: c.notes ?? null,
+            sourceId: sem.source_id ?? null,
+            order: order++,
+          });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Map of id -> course, for O(1) lookup. */
+function indexCourses(courses) {
+  const m = new Map();
+  for (const c of courses) m.set(c.id, c);
+  return m;
+}
+
+/** Distinct semester keys in curriculum order, for grouped display. */
+function semesterKeys(doc) {
+  const keys = [];
+  for (const year of doc.years ?? []) {
+    for (const sem of year.semesters ?? []) {
+      keys.push({ year: year.year, yearLabel: year.label, semester: sem.semester, semesterLabel: sem.label });
+    }
+  }
+  return keys;
+}
+
+/**
+ * Structural validation of a curriculum document.
+ * Returns { errors, warnings, info } — arrays of human-readable strings.
+ */
+function validateCurriculum(doc) {
+  const errors = [];
+  const warnings = [];
+  const info = [];
+
+  for (const field of ['curriculum_version', 'institution', 'programme', 'grade_scale', 'years']) {
+    if (doc[field] === undefined) errors.push(`Missing top-level field: ${field}`);
+  }
+
+  const courses = flattenCurriculum(doc);
+  if (courses.length === 0) errors.push('Curriculum contains no courses.');
+
+  // Duplicate ids (same year + semester + code twice).
+  const seenIds = new Map();
+  for (const c of courses) {
+    if (seenIds.has(c.id)) {
+      errors.push(`Duplicate course id ${c.id} (${c.code}) in ${c.yearLabel} / ${c.semesterLabel}.`);
+    } else {
+      seenIds.set(c.id, c);
+    }
+  }
+
+  // Course code repeated anywhere else in the programme.
+  const byCode = new Map();
+  for (const c of courses) {
+    if (!byCode.has(c.code)) byCode.set(c.code, []);
+    byCode.get(c.code).push(c);
+  }
+  for (const [code, list] of byCode) {
+    if (list.length > 1) {
+      const where = list.map((c) => `Y${c.year}S${c.semester}`).join(', ');
+      warnings.push(`Course code ${code} appears ${list.length} times (${where}).`);
+    }
+  }
+
+  // Course code shape: three letters, space, three digits.
+  const codeShape = /^[A-Z]{3} \d{3}$/;
+  for (const c of courses) {
+    if (!codeShape.test(c.code)) warnings.push(`Malformed course code: "${c.code}" (${c.yearLabel} / ${c.semesterLabel}).`);
+  }
+
+  // Units.
+  for (const c of courses) {
+    if (c.unitsUnknown) {
+      warnings.push(`Missing unit load: ${c.code} (${c.yearLabel} / ${c.semesterLabel}). ${c.notes ?? ''}`.trim());
+    } else if (c.units === 0) {
+      warnings.push(`Zero-unit course: ${c.code} (${c.yearLabel} / ${c.semesterLabel}).`);
+    } else if (!Number.isInteger(c.units) || c.units < 0 || c.units > 12) {
+      warnings.push(`Unusual unit load ${c.units} for ${c.code} (${c.yearLabel} / ${c.semesterLabel}).`);
+    }
+  }
+
+  // Missing titles.
+  for (const c of courses) {
+    if (c.titleUnknown) warnings.push(`Missing course title: ${c.code} (${c.yearLabel} / ${c.semesterLabel}).`);
+  }
+
+  // Year / semester consistency.
+  for (const year of doc.years ?? []) {
+    const sems = (year.semesters ?? []).map((s) => s.semester);
+    if (sems.length !== 2 || sems[0] !== 1 || sems[1] !== 2) {
+      warnings.push(`${year.label} does not have exactly First and Second semesters (found: ${sems.join(', ')}).`);
+    }
+  }
+  const years = (doc.years ?? []).map((y) => y.year);
+  for (let i = 0; i < years.length; i++) {
+    if (years[i] !== i + 1) { warnings.push(`Year numbering is not 1..n (found: ${years.join(', ')}).`); break; }
+  }
+
+  // Declared semester totals vs. the sum of the courses actually listed.
+  for (const year of doc.years ?? []) {
+    for (const sem of year.semesters ?? []) {
+      const here = courses.filter((c) => c.year === year.year && c.semester === sem.semester);
+      const compulsory = here.filter((c) => c.groupType !== 'elective');
+      const unknown = here.filter((c) => c.unitsUnknown);
+      const compulsorySum = compulsory.reduce((a, c) => a + (c.units ?? 0), 0);
+
+      let electiveUnits = 0;
+      const electiveGroups = (sem.groups ?? []).filter((g) => g.type === 'elective');
+      const seenGroupLabels = new Set();
+      for (const g of electiveGroups) {
+        // Alternative option areas: count one option's requirement, not all of them.
+        if (seenGroupLabels.size === 0) electiveUnits = g.choose_units ?? 0;
+        seenGroupLabels.add(g.label);
+      }
+
+      const expected = sem.stated_total_units;
+      if (expected == null) {
+        info.push(`${year.label} / ${sem.label}: no total unit load is stated in the source; cannot cross-check.`);
+      } else if (unknown.length > 0) {
+        info.push(`${year.label} / ${sem.label}: ${unknown.length} course(s) have no unit load, so the stated total of ${expected} cannot be cross-checked.`);
+      } else {
+        const computed = compulsorySum + electiveUnits;
+        if (computed !== expected) {
+          errors.push(`${year.label} / ${sem.label}: units sum to ${computed} but the source states ${expected}.`);
+        } else {
+          info.push(`${year.label} / ${sem.label}: units sum to ${computed}, matching the stated total.`);
+        }
+      }
+    }
+  }
+
+  return { errors, warnings, info, courses };
+}
+
+/* ======== src/gpa-engine.js ======== */
+/**
+ * gpa-engine.js — the GPA calculation engine. Pure functions, no DOM, no storage.
+ *
+ * The single computational rule:
+ *
+ *     ACTIVE COURSE = a valid alphabetic grade A-F has been entered
+ *
+ *     GPA = SUM(unit_i x gradePoint_i) over active courses
+ *           ------------------------------------------------
+ *           SUM(unit_i)                over active courses
+ *
+ * Year, semester, curriculum position and course ordering are NOT inputs to
+ * this rule. They are only ever used to *partition* an already-computed set of
+ * active courses for reporting.
+ */
+
+/**
+ * The unit load actually used for a course: the curriculum value, unless the
+ * student has supplied one for a course whose unit load is missing from the
+ * source document.
+ */
+function effectiveUnits(course, state) {
+  const override = state?.unitOverrides?.[course.id];
+  if (Number.isFinite(override)) return override;
+  return Number.isFinite(course.units) ? course.units : null;
+}
+
+/**
+ * Per-course computed row. `active` is true only when a valid grade is present
+ * AND the unit load is known.
+ */
+function evaluateCourse(course, state) {
+  const grade = normaliseGrade(state?.grades?.[course.id]);
+  const units = effectiveUnits(course, state);
+  const gp = grade === NOT_ENTERED ? null : gradePoint(grade);
+  const unitsKnown = Number.isFinite(units);
+  const active = grade !== NOT_ENTERED && unitsKnown;
+  return {
+    course,
+    grade,
+    units,
+    unitsKnown,
+    gradePoint: gp,
+    coursePoint: active ? units * gp : null,
+    active,
+    // A grade was entered but we do not know the unit load: the student must
+    // supply it before the course can join the calculation.
+    blocked: grade !== NOT_ENTERED && !unitsKnown,
+  };
+}
+
+/** Evaluate every course in curriculum order. */
+function evaluateAll(courses, state) {
+  return courses.map((c) => evaluateCourse(c, state));
+}
+
+/** Round to two decimal places, the conventional GPA presentation. */
+function roundGpa(value) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/** Format a GPA for display; an empty set of active courses has no GPA. */
+function formatGpa(value) {
+  const r = roundGpa(value);
+  return r === null ? '—' : r.toFixed(2);
+}
+
+/**
+ * Summarise a set of evaluated rows.
+ * Only `active` rows contribute anything at all: an unentered course adds
+ * 0 units to the denominator and 0 points to the numerator.
+ */
+function summariseRows(rows) {
+  let gradedCourses = 0;
+  let units = 0;
+  let points = 0;
+  let blocked = 0;
+  for (const r of rows) {
+    if (r.blocked) blocked++;
+    if (!r.active) continue;
+    gradedCourses++;
+    units += r.units;
+    points += r.coursePoint;
+  }
+  const gpa = units > 0 ? points / units : null;
+  return {
+    gradedCourses,
+    units,
+    points,
+    gpa,
+    gpaRounded: roundGpa(gpa),
+    gpaText: formatGpa(gpa),
+    classification: classOfDegree(roundGpa(gpa)),
+    blocked,
+  };
+}
+
+/** Cumulative summary over every course for which a grade has been entered. */
+function summarise(courses, state) {
+  return summariseRows(evaluateAll(courses, state));
+}
+
+/**
+ * Partition an evaluation into buckets and summarise each bucket.
+ * Used purely for reporting: semester GPA, year GPA, and so on. The bucket key
+ * has no influence on whether a course is active.
+ */
+function summariseBy(courses, state, keyFn) {
+  const rows = evaluateAll(courses, state);
+  const buckets = new Map();
+  for (const r of rows) {
+    const key = keyFn(r.course);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(r);
+  }
+  const out = new Map();
+  for (const [key, list] of buckets) out.set(key, summariseRows(list));
+  return out;
+}
+
+/** Convenience: GPA per semester, keyed "y<year>s<semester>". */
+function semesterSummaries(courses, state) {
+  return summariseBy(courses, state, (c) => `y${c.year}s${c.semester}`);
+}
+
+/** Convenience: GPA per academic year, keyed "y<year>". */
+function yearSummaries(courses, state) {
+  return summariseBy(courses, state, (c) => `y${c.year}`);
+}
+
+/** An empty, valid state object. */
+function emptyState(curriculumVersion) {
+  return { curriculumVersion: curriculumVersion ?? null, grades: {}, unitOverrides: {} };
+}
+
+/**
+ * UPSERT a grade. Returns a NEW state object; never mutates the input.
+ * Setting the grade to NOT_ENTERED (null / '' / '—') removes the record
+ * entirely, which returns the course to the dormant state.
+ */
+function setGrade(state, id, value) {
+  const grade = normaliseGrade(value);
+  const grades = { ...state.grades };
+  if (grade === NOT_ENTERED) delete grades[id];
+  else grades[id] = grade; // same key -> overwrite, so no duplicate can arise
+  return { ...state, grades };
+}
+
+/** UPSERT a student-supplied unit load for a course whose units are unknown. */
+function setUnitOverride(state, id, value) {
+  const overrides = { ...state.unitOverrides };
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? '').trim(), 10);
+  if (!Number.isFinite(n) || n <= 0) delete overrides[id];
+  else overrides[id] = n;
+  return { ...state, unitOverrides: overrides };
+}
+
+/** Remove every entered result. */
+function clearAll(state) {
+  return { ...state, grades: {}, unitOverrides: {} };
+}
+
+/* ======== src/storage.js ======== */
+/**
+ * storage.js — persistence, isolated behind a small async repository interface.
+ *
+ * The interface is intentionally async even though localStorage is synchronous,
+ * so that a server-backed repository can be substituted later without touching
+ * the GPA engine or the UI's call sites.
+ *
+ * Shape written to the backend (a single key, rewritten in place):
+ *
+ *   {
+ *     schema_version: 1,
+ *     active: "unn-mee-beng-5yr@2023.1",
+ *     records: {
+ *       "unn-mee-beng-5yr@2023.1": {
+ *         curriculum_id, curriculum_version, saved_at,
+ *         grades:        { "<courseId>": "A", ... },
+ *         unitOverrides: { "<courseId>": 2,  ... }
+ *       }
+ *     }
+ *   }
+ *
+ * Results are keyed by curriculum id + version, so publishing a new curriculum
+ * version cannot overwrite or corrupt results saved under the previous one.
+ *
+ * Every write is an UPSERT into `records[key]` and into the `grades` object
+ * inside it. There is no array anywhere in the persisted shape, so repeating a
+ * save can never append a duplicate course record or duplicate grade entry.
+ */
+
+const STORAGE_KEY = 'unn-mee-gpa-calculator';
+const SCHEMA_VERSION = 1;
+
+/** In-memory backend with the Web Storage surface. Used by the tests. */
+class MemoryBackend {
+  constructor(initial = {}) { this.map = new Map(Object.entries(initial)); }
+  getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
+  setItem(k, v) { this.map.set(k, String(v)); }
+  removeItem(k) { this.map.delete(k); }
+  get length() { return this.map.size; }
+}
+
+/** Backend that silently degrades to memory when localStorage is unavailable. */
+function defaultBackend() {
+  try {
+    const probe = '__gpa_probe__';
+    globalThis.localStorage.setItem(probe, '1');
+    globalThis.localStorage.removeItem(probe);
+    return globalThis.localStorage;
+  } catch {
+    return new MemoryBackend();
+  }
+}
+
+function recordKey(curriculumId, curriculumVersion) {
+  return `${curriculumId}@${curriculumVersion}`;
+}
+
+function emptyEnvelope() {
+  return { schema_version: SCHEMA_VERSION, active: null, records: {} };
+}
+
+class ResultsRepository {
+  /**
+   * @param {object} opts
+   * @param {object} [opts.backend]  Web Storage-like object.
+   * @param {string} opts.curriculumId
+   * @param {string} opts.curriculumVersion
+   * @param {string} [opts.key]      Backend key to use.
+   */
+  constructor({ backend, curriculumId, curriculumVersion, key = STORAGE_KEY } = {}) {
+    this.backend = backend ?? defaultBackend();
+    this.curriculumId = curriculumId;
+    this.curriculumVersion = curriculumVersion;
+    this.key = key;
+  }
+
+  get recordKey() { return recordKey(this.curriculumId, this.curriculumVersion); }
+
+  /** Read and repair the whole envelope. Never throws on corrupt data. */
+  readEnvelope() {
+    const raw = this.backend.getItem(this.key);
+    if (!raw) return emptyEnvelope();
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return emptyEnvelope(); }
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.records !== 'object' || parsed.records === null) {
+      return emptyEnvelope();
+    }
+    return { schema_version: parsed.schema_version ?? SCHEMA_VERSION, active: parsed.active ?? null, records: parsed.records };
+  }
+
+  writeEnvelope(env) {
+    this.backend.setItem(this.key, JSON.stringify(env));
+  }
+
+  /**
+   * Load the state for this curriculum version.
+   * Returns { state, found, otherVersions } — `otherVersions` lists results
+   * saved under a different curriculum version, which are left untouched.
+   */
+  async load() {
+    const env = this.readEnvelope();
+    const rec = env.records[this.recordKey];
+    const otherVersions = Object.keys(env.records)
+      .filter((k) => k !== this.recordKey)
+      .map((k) => ({
+        key: k,
+        curriculum_version: env.records[k]?.curriculum_version ?? k.split('@')[1] ?? null,
+        saved_at: env.records[k]?.saved_at ?? null,
+        entries: Object.keys(env.records[k]?.grades ?? {}).length,
+      }));
+
+    const state = {
+      curriculumVersion: this.curriculumVersion,
+      grades: { ...(rec?.grades ?? {}) },
+      unitOverrides: { ...(rec?.unitOverrides ?? {}) },
+    };
+    return { state, found: Boolean(rec), savedAt: rec?.saved_at ?? null, otherVersions };
+  }
+
+  /**
+   * UPSERT the state for this curriculum version.
+   * Idempotent: saving the same state twice leaves an identical envelope apart
+   * from `saved_at`, and never creates a second record for the same course.
+   */
+  async save(state) {
+    const env = this.readEnvelope();
+    env.schema_version = SCHEMA_VERSION;
+    env.active = this.recordKey;
+    env.records[this.recordKey] = {
+      curriculum_id: this.curriculumId,
+      curriculum_version: this.curriculumVersion,
+      saved_at: new Date().toISOString(),
+      grades: { ...(state.grades ?? {}) },
+      unitOverrides: { ...(state.unitOverrides ?? {}) },
+    };
+    this.writeEnvelope(env);
+    return env.records[this.recordKey];
+  }
+
+  /** Delete only this curriculum version's results; other versions survive. */
+  async clear() {
+    const env = this.readEnvelope();
+    delete env.records[this.recordKey];
+    if (env.active === this.recordKey) env.active = null;
+    this.writeEnvelope(env);
+  }
+
+  /** Copy results saved under another curriculum version into this one. */
+  async adoptFrom(otherKey) {
+    const env = this.readEnvelope();
+    const src = env.records[otherKey];
+    if (!src) return null;
+    const state = {
+      curriculumVersion: this.curriculumVersion,
+      grades: { ...(src.grades ?? {}) },
+      unitOverrides: { ...(src.unitOverrides ?? {}) },
+    };
+    await this.save(state);
+    return state;
+  }
+
+  /** Portable export payload (section 15). */
+  async exportPayload(state, extra = {}) {
+    return {
+      format: 'unn-mee-gpa-calculator-export',
+      format_version: 1,
+      curriculum_id: this.curriculumId,
+      curriculum_version: this.curriculumVersion,
+      exported_at: new Date().toISOString(),
+      grades: { ...(state.grades ?? {}) },
+      unitOverrides: { ...(state.unitOverrides ?? {}) },
+      ...extra,
+    };
+  }
+
+  /**
+   * Validate and convert an imported payload into a state object.
+   * Throws on a payload that is not recognisably an export of this calculator.
+   */
+  parseImport(payload) {
+    if (!payload || typeof payload !== 'object') throw new Error('The file does not contain a JSON object.');
+    if (payload.format !== 'unn-mee-gpa-calculator-export') {
+      throw new Error('This file is not an export from the UNN MEE GPA calculator.');
+    }
+    if (!payload.grades || typeof payload.grades !== 'object') {
+      throw new Error('The export contains no "grades" object.');
+    }
+    const versionMismatch =
+      payload.curriculum_version != null && payload.curriculum_version !== this.curriculumVersion;
+    return {
+      state: {
+        curriculumVersion: this.curriculumVersion,
+        grades: { ...payload.grades },
+        unitOverrides: { ...(payload.unitOverrides ?? {}) },
+      },
+      versionMismatch,
+      importedVersion: payload.curriculum_version ?? null,
+      exportedAt: payload.exported_at ?? null,
+    };
+  }
+}
+
+/* ======== src/ui.js ======== */
+/**
+ * ui.js — presentation only.
+ *
+ * This module knows about the DOM. It does not know how a GPA is computed
+ * (gpa-engine.js), what the grade scale is (grading.js), where results are kept
+ * (storage.js), or what the courses are (data/curriculum.json).
+ */
+
+
+
+
+const $ = (sel) => document.querySelector(sel);
+
+const els = {
+  bootError: $('#boot-error'),
+  versionNotice: $('#version-notice'),
+  meta: $('#curriculum-meta'),
+  root: $('#curriculum-root'),
+  yearnav: $('#yearnav'),
+  filterText: $('#filter-text'),
+  filterEntered: $('#filter-entered'),
+  gpa: $('#stat-gpa'),
+  klass: $('#stat-class'),
+  courses: $('#stat-courses'),
+  units: $('#stat-units'),
+  points: $('#stat-points'),
+  saveState: $('#save-state'),
+  yearTotals: $('#year-totals').tBodies[0],
+  cumCourses: $('#cum-courses'),
+  cumUnits: $('#cum-units'),
+  cumPoints: $('#cum-points'),
+  cumGpa: $('#cum-gpa'),
+  colophon: $('#colophon'),
+  btnExport: $('#btn-export'),
+  btnImport: $('#btn-import'),
+  btnReset: $('#btn-reset'),
+  fileImport: $('#file-import'),
+};
+
+let doc = null;         // the curriculum document
+let courses = [];       // flat course records
+let state = null;       // { curriculumVersion, grades, unitOverrides }
+let repo = null;
+const rowRefs = new Map();   // courseId -> { tr, select, unitCell, gpCell, pointCell }
+const semRefs = new Map();   // "y1s1"  -> summary element
+
+/* ------------------------------------------------------------------ boot */
+
+async function boot() {
+  try {
+    // The single-file build (dist/) embeds the curriculum so that the page works
+    // straight from a downloaded file, with no server and no network.
+    if (globalThis.__UNN_CURRICULUM__) {
+      doc = globalThis.__UNN_CURRICULUM__;
+    } else {
+      const res = await fetch('./data/curriculum.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} fetching data/curriculum.json`);
+      doc = await res.json();
+    }
+  } catch (err) {
+    els.bootError.hidden = false;
+    els.bootError.innerHTML =
+      `<strong>Could not load the curriculum data.</strong><br>${escapeHtml(String(err.message || err))}` +
+      `<br><br>If you opened this file directly from disk, browsers block the data file for security reasons. ` +
+      `Start the small local server instead:<br><code>cd gpa-calculator &amp;&amp; python3 -m http.server 8000</code>` +
+      `<br>then open <code>http://localhost:8000/</code>.`;
+    return;
+  }
+
+  courses = flattenCurriculum(doc);
+  repo = new ResultsRepository({
+    curriculumId: doc.curriculum_id,
+    curriculumVersion: doc.curriculum_version,
+  });
+
+  const loaded = await repo.load();
+  state = loaded.state ?? emptyState(doc.curriculum_version);
+
+  if (!loaded.found && loaded.otherVersions.length > 0) offerCarryOver(loaded.otherVersions);
+
+  els.meta.textContent =
+    `${doc.programme_track} · curriculum version ${doc.curriculum_version} · ${courses.length} courses`;
+
+  buildYearNav();
+  buildTables();
+  wireGlobalControls();
+  refreshAll();
+  els.saveState.textContent = loaded.found
+    ? `Loaded saved results${loaded.savedAt ? ` (saved ${formatWhen(loaded.savedAt)})` : ''}`
+    : 'No results entered yet';
+  renderColophon();
+}
+
+/* --------------------------------------------------------------- building */
+
+function buildYearNav() {
+  els.yearnav.innerHTML = '';
+  for (const y of doc.years) {
+    const a = document.createElement('a');
+    a.href = `#year-${y.year}`;
+    a.textContent = y.label;
+    els.yearnav.append(a);
+  }
+}
+
+function buildTables() {
+  els.root.innerHTML = '';
+  for (const year of doc.years) {
+    const section = document.createElement('section');
+    section.className = 'year';
+    section.id = `year-${year.year}`;
+
+    const h2 = document.createElement('h2');
+    h2.textContent = year.label;
+    section.append(h2);
+
+    for (const sem of year.semesters) {
+      section.append(buildSemester(year, sem));
+    }
+    els.root.append(section);
+  }
+}
+
+function buildSemester(year, sem) {
+  const key = `y${year.year}s${sem.semester}`;
+  const wrap = document.createElement('article');
+  wrap.className = 'semester';
+
+  const header = document.createElement('header');
+  const h3 = document.createElement('h3');
+  h3.textContent = sem.label;
+  const summary = document.createElement('div');
+  summary.className = 'sem-summary';
+  semRefs.set(key, summary);
+  header.append(h3, summary);
+  wrap.append(header);
+
+  for (const group of sem.groups) {
+    const isElective = group.type === 'elective';
+    if (isElective || sem.groups.length > 1) {
+      const gh = document.createElement('div');
+      gh.className = 'group-head' + (isElective ? ' elective' : '');
+      gh.innerHTML = `<strong>${escapeHtml(group.label)}</strong>` +
+        (isElective && group.choose
+          ? ` — the programme says choose ${group.choose} course${group.choose > 1 ? 's' : ''}` +
+            (group.choose_units ? ` (${group.choose_units} units)` : '') +
+            `. Just enter grades for the electives you actually took; the calculator counts whatever you enter.`
+          : '');
+      wrap.append(gh);
+    }
+
+    const table = document.createElement('table');
+    table.className = 'courses';
+    table.innerHTML =
+      '<thead><tr>' +
+      '<th>Course</th><th class="col-title">Title</th>' +
+      '<th class="num">Units</th><th>Grade</th>' +
+      '<th class="num">Grade&nbsp;pt</th><th class="num">Course&nbsp;pt</th>' +
+      '</tr></thead><tbody></tbody>';
+    const tbody = table.tBodies[0];
+
+    for (const c of group.courses) {
+      tbody.append(buildRow(year, sem, c));
+    }
+    wrap.append(table);
+  }
+  return wrap;
+}
+
+function buildRow(year, sem, rawCourse) {
+  const course = courses.find(
+    (c) => c.year === year.year && c.semester === sem.semester && c.code === rawCourse.code,
+  );
+  const tr = document.createElement('tr');
+  tr.dataset.id = course.id;
+
+  const tdCode = document.createElement('td');
+  tdCode.className = 'c-code';
+  tdCode.textContent = course.code;
+  if (course.legacyCode) {
+    const s = document.createElement('div');
+    s.className = 'legacy';
+    s.textContent = `was ${course.legacyCode}`;
+    tdCode.append(s);
+  }
+
+  const tdTitle = document.createElement('td');
+  tdTitle.className = 'c-title';
+  if (course.titleUnknown) {
+    tdTitle.innerHTML = '<span class="unknown">Title not stated in the source document</span>';
+  } else {
+    tdTitle.textContent = course.title;
+  }
+  if (course.notes) {
+    const n = document.createElement('span');
+    n.className = 'c-note';
+    n.textContent = course.notes;
+    tdTitle.append(n);
+  }
+
+  const tdUnits = document.createElement('td');
+  tdUnits.className = 'num cell-units';
+  tdUnits.dataset.label = 'Units';
+
+  const tdGrade = document.createElement('td');
+  tdGrade.className = 'cell-grade';
+  const select = document.createElement('select');
+  select.className = 'grade';
+  select.setAttribute('aria-label', `Grade for ${course.code}`);
+  select.append(new Option('—', ''));
+  for (const g of GRADES) select.append(new Option(g, g));
+  select.value = state.grades[course.id] ?? '';
+  select.addEventListener('change', () => onGradeChange(course.id, select.value));
+  tdGrade.append(select);
+
+  const tdGp = document.createElement('td');
+  tdGp.className = 'num cell-gp';
+  tdGp.dataset.label = 'Grade pt';
+  const tdPt = document.createElement('td');
+  tdPt.className = 'num cell-pt';
+  tdPt.dataset.label = 'Course pt';
+
+  tr.append(tdCode, tdTitle, tdUnits, tdGrade, tdGp, tdPt);
+  rowRefs.set(course.id, { tr, select, tdUnits, tdGp, tdPt, course });
+  return tr;
+}
+
+/* ---------------------------------------------------------------- events */
+
+async function onGradeChange(id, value) {
+  state = setGrade(state, id, value);
+  await persist();
+  refreshAll();
+}
+
+async function onUnitOverride(id, value) {
+  state = setUnitOverride(state, id, value);
+  await persist();
+  refreshAll();
+}
+
+async function persist() {
+  try {
+    await repo.save(state);
+    els.saveState.textContent = `Saved ${formatWhen(new Date().toISOString())}`;
+  } catch (err) {
+    els.saveState.textContent = `Could not save: ${err.message}`;
+  }
+}
+
+function wireGlobalControls() {
+  els.filterText.addEventListener('input', applyFilter);
+  els.filterEntered.addEventListener('change', applyFilter);
+
+  els.btnExport.addEventListener('click', async () => {
+    const payload = await repo.exportPayload(state, {
+      institution: doc.institution,
+      programme: doc.programme,
+      summary: publicSummary(),
+    });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `unn-mee-gpa-${doc.curriculum_version}-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  els.btnImport.addEventListener('click', () => els.fileImport.click());
+  els.fileImport.addEventListener('change', async () => {
+    const file = els.fileImport.files?.[0];
+    els.fileImport.value = '';
+    if (!file) return;
+    try {
+      const parsed = repo.parseImport(JSON.parse(await file.text()));
+      const n = Object.keys(parsed.state.grades).length;
+      const warn = parsed.versionMismatch
+        ? `\n\nNote: that file was exported under curriculum version ${parsed.importedVersion}, ` +
+          `but this calculator is running curriculum version ${doc.curriculum_version}. ` +
+          `Grades for courses that no longer exist will simply be ignored.`
+        : '';
+      if (!confirm(`Import ${n} grade(s)? This replaces the results currently entered here.${warn}`)) return;
+      state = parsed.state;
+      await persist();
+      syncControlsFromState();
+      refreshAll();
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    }
+  });
+
+  els.btnReset.addEventListener('click', async () => {
+    const n = Object.keys(state.grades).length;
+    if (n === 0) { alert('There are no results to reset.'); return; }
+    if (!confirm(`Delete all ${n} entered grade(s)? This cannot be undone.`)) return;
+    if (!confirm('Please confirm once more: erase every grade you have entered?')) return;
+    state = clearAll(state);
+    await repo.clear();
+    syncControlsFromState();
+    refreshAll();
+    els.saveState.textContent = 'All results cleared';
+  });
+}
+
+function syncControlsFromState() {
+  for (const [id, ref] of rowRefs) ref.select.value = state.grades[id] ?? '';
+}
+
+function applyFilter() {
+  const q = els.filterText.value.trim().toLowerCase();
+  const onlyEntered = els.filterEntered.checked;
+  for (const [id, ref] of rowRefs) {
+    const c = ref.course;
+    const hay = `${c.code} ${c.title ?? ''} ${c.legacyCode ?? ''}`.toLowerCase();
+    const matches = (!q || hay.includes(q)) && (!onlyEntered || Boolean(state.grades[id]));
+    ref.tr.classList.toggle('hidden', !matches);
+  }
+}
+
+/* -------------------------------------------------------------- rendering */
+
+function refreshAll() {
+  // Per-course rows.
+  for (const [, ref] of rowRefs) {
+    const ev = evaluateCourse(ref.course, state);
+
+    // Units cell: an editable box only where the source document omitted units.
+    if (ref.course.unitsUnknown) {
+      if (!ref.unitInput) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = '1';
+        input.className = 'units-input';
+        input.placeholder = '?';
+        input.title = 'The source document does not state this unit load. Enter it yourself to include this course.';
+        input.setAttribute('aria-label', `Unit load for ${ref.course.code}`);
+        input.addEventListener('change', () => onUnitOverride(ref.course.id, input.value));
+        ref.tdUnits.textContent = '';
+        ref.tdUnits.append(input);
+        ref.unitInput = input;
+      }
+      const wanted = state.unitOverrides[ref.course.id];
+      const str = Number.isFinite(wanted) ? String(wanted) : '';
+      if (ref.unitInput.value !== str && document.activeElement !== ref.unitInput) ref.unitInput.value = str;
+    } else {
+      ref.tdUnits.textContent = String(ref.course.units);
+    }
+
+    ref.select.classList.toggle('set', ev.grade !== null);
+    ref.select.dataset.grade = ev.grade ?? '';
+    ref.tdGp.innerHTML = ev.gradePoint === null ? '<span class="dash">—</span>' : String(ev.gradePoint);
+    ref.tdPt.innerHTML = ev.coursePoint === null ? '<span class="dash">—</span>' : String(ev.coursePoint);
+    ref.tr.classList.toggle('active', ev.active);
+    ref.tr.classList.toggle('blocked', ev.blocked);
+  }
+
+  // Semester strips.
+  const sems = semesterSummaries(courses, state);
+  for (const k of semesterKeys(doc)) {
+    const key = `y${k.year}s${k.semester}`;
+    const el = semRefs.get(key);
+    const s = sems.get(key);
+    if (!el) continue;
+    el.innerHTML = !s || s.gradedCourses === 0
+      ? '<span class="dash">no results entered</span>'
+      : `${s.gradedCourses} graded · ${s.units} units · ${s.points} points · Semester GPA <b>${s.gpaText}</b>`;
+  }
+
+  // Year totals table.
+  const years = yearSummaries(courses, state);
+  els.yearTotals.innerHTML = '';
+  for (const y of doc.years) {
+    const s = years.get(`y${y.year}`);
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<th>${escapeHtml(y.label)}</th>` +
+      `<td class="num">${s.gradedCourses}</td>` +
+      `<td class="num">${s.units}</td>` +
+      `<td class="num">${s.points}</td>` +
+      `<td class="num">${s.gradedCourses ? s.gpaText : '<span class="dash">—</span>'}</td>`;
+    els.yearTotals.append(tr);
+  }
+
+  // Cumulative.
+  const total = summarise(courses, state);
+  els.gpa.textContent = total.gpaText;
+  els.klass.textContent = total.gradedCourses ? (total.classification ?? '') : 'no results entered yet';
+  els.courses.textContent = String(total.gradedCourses);
+  els.units.textContent = String(total.units);
+  els.points.textContent = String(total.points);
+  els.cumCourses.textContent = String(total.gradedCourses);
+  els.cumUnits.textContent = String(total.units);
+  els.cumPoints.textContent = String(total.points);
+  els.cumGpa.textContent = total.gpaText;
+
+  if (total.blocked > 0) {
+    els.versionNotice.hidden = false;
+    els.versionNotice.innerHTML =
+      `<strong>${total.blocked} graded course${total.blocked > 1 ? 's are' : ' is'} waiting for a unit load.</strong> ` +
+      `The source document does not state the unit load for those courses, so they are highlighted and excluded ` +
+      `from the GPA until you type the number of units into the Units box.`;
+  } else if (els.versionNotice.dataset.sticky !== 'carryover') {
+    els.versionNotice.hidden = true;
+  }
+
+  applyFilter();
+}
+
+function publicSummary() {
+  const t = summarise(courses, state);
+  return { graded_courses: t.gradedCourses, units: t.units, quality_points: t.points, gpa: formatGpa(t.gpa) };
+}
+
+function offerCarryOver(others) {
+  const best = others.find((o) => o.entries > 0);
+  if (!best) return;
+  els.versionNotice.hidden = false;
+  els.versionNotice.dataset.sticky = 'carryover';
+  els.versionNotice.innerHTML =
+    `<strong>Results found under curriculum version ${escapeHtml(String(best.curriculum_version))}.</strong> ` +
+    `This calculator is running curriculum version ${escapeHtml(doc.curriculum_version)}. ` +
+    `Those results have been left exactly as they were. ` +
+    `<button type="button" id="btn-carryover">Copy them into version ${escapeHtml(doc.curriculum_version)}</button>`;
+  els.versionNotice.querySelector('#btn-carryover').addEventListener('click', async () => {
+    const copied = await repo.adoptFrom(best.key);
+    if (copied) {
+      state = copied;
+      delete els.versionNotice.dataset.sticky;
+      els.versionNotice.hidden = true;
+      syncControlsFromState();
+      refreshAll();
+    }
+  });
+}
+
+function renderColophon() {
+  const srcs = (doc.sources ?? []).map((s) => `<code>${escapeHtml(s.document)}</code>`).join(' and ');
+  els.colophon.innerHTML =
+    `Curriculum <code>${escapeHtml(doc.curriculum_id)}</code> version <code>${escapeHtml(doc.curriculum_version)}</code>, ` +
+    `extracted from ${srcs}. Results are stored only in this browser; nothing is transmitted anywhere. ` +
+    `Course data lives in <code>data/curriculum.json</code> and can be corrected without touching the GPA engine.`;
+}
+
+/* --------------------------------------------------------------- helpers */
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (ch) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+}
+
+function formatWhen(iso) {
+  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+}
+
+boot();
+
+</script>
+</body>
+</html>

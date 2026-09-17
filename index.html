@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#16191d">
+<meta name="description" content="Incremental GPA calculator for the B.Eng. Mechanical Engineering programme, University of Nigeria, Nsukka.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6b3a'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EGP%3C/text%3E%3C/svg%3E">
+<title>UNN Mechanical Engineering — GPA Calculator</title>
+<link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="titles">
+      <h1>GPA Calculator</h1>
+      <p class="sub">Department of Mechanical Engineering &middot; University of Nigeria, Nsukka</p>
+      <p class="meta" id="curriculum-meta"></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-export">Export results</button>
+      <button type="button" id="btn-import">Import results</button>
+      <button type="button" id="btn-reset" class="danger">Reset results</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </div>
+</header>
+
+<div class="summary-bar" id="summary-bar">
+  <div class="summary-inner">
+    <div class="stat stat-primary">
+      <span class="stat-label">Current GPA</span>
+      <span class="stat-value" id="stat-gpa">—</span>
+      <span class="stat-note" id="stat-class"></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Graded courses</span>
+      <span class="stat-value" id="stat-courses">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Activated units</span>
+      <span class="stat-value" id="stat-units">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Total quality points</span>
+      <span class="stat-value" id="stat-points">0</span>
+    </div>
+    <div class="save-state" id="save-state" aria-live="polite"></div>
+  </div>
+</div>
+
+<main>
+  <div id="boot-error" class="notice error" hidden></div>
+  <div id="version-notice" class="notice warn" hidden></div>
+
+  <section class="toolbar">
+    <label class="field">
+      <span>Find a course</span>
+      <input type="search" id="filter-text" placeholder="e.g. MEE 313, thermodynamics">
+    </label>
+    <label class="check">
+      <input type="checkbox" id="filter-entered">
+      <span>Show only courses I have graded</span>
+    </label>
+    <nav class="yearnav" id="yearnav" aria-label="Jump to year"></nav>
+  </section>
+
+  <p class="rule-note">
+    A course joins the GPA <strong>only</strong> when you choose a grade for it. Leaving a course at
+    <strong>&mdash;</strong> keeps it dormant: it contributes no units and no points. A grade of
+    <strong>F</strong> is different &mdash; it scores 0 points but its units still count towards the denominator.
+    You may enter any result, in any year or semester, in any order.
+  </p>
+
+  <div id="curriculum-root"></div>
+
+  <section class="totals-panel">
+    <h2>Summary by academic year</h2>
+    <div class="table-scroll">
+    <table class="totals" id="year-totals">
+      <thead>
+        <tr><th>Year</th><th class="num">Graded</th><th class="num">Units</th><th class="num">Points</th><th class="num">Year GPA</th></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <th>Cumulative (all entered results)</th>
+          <td class="num" id="cum-courses">0</td>
+          <td class="num" id="cum-units">0</td>
+          <td class="num" id="cum-points">0</td>
+          <td class="num strong" id="cum-gpa">—</td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+  </section>
+
+  <footer class="colophon" id="colophon"></footer>
+</main>
+
+<script type="module" src="./src/ui.js"></script>
+</body>
+</html>

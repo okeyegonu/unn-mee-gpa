@@ -1,0 +1,16 @@
+{
+  "name": "unn-mee-gpa-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Incremental GPA calculator for the B.Eng. Mechanical Engineering programme, University of Nigeria, Nsukka.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "validate": "node tools/validate-curriculum.mjs",
+    "build": "node tools/build-single-file.mjs",
+    "start": "./serve.sh",
+    "smoke": "node tools/browser-smoke.mjs",
+    "smoke:mobile": "node tools/mobile-smoke.mjs",
+    "smoke:offline": "node tools/file-url-smoke.mjs"
+  }
+}

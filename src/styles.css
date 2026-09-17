@@ -1,0 +1,303 @@
+:root {
+  --ink: #16191d;
+  --ink-soft: #55606d;
+  --ink-faint: #8a94a2;
+  --rule: #dfe3e9;
+  --rule-soft: #ecf0f4;
+  --paper: #ffffff;
+  --ground: #f4f6f9;
+  --accent: #0b6b3a;
+  --accent-soft: #e8f3ec;
+  --warn: #8a5a00;
+  --warn-soft: #fdf3dc;
+  --danger: #a32020;
+  --danger-soft: #fbeaea;
+  --radius: 8px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+main { max-width: 1120px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ---------- masthead ---------- */
+.masthead { background: var(--ink); color: #fff; }
+.masthead-inner {
+  max-width: 1120px; margin: 0 auto; padding: 18px 20px;
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: space-between;
+}
+.masthead h1 { margin: 0; font-size: 20px; letter-spacing: .01em; }
+.masthead .sub { margin: 4px 0 0; font-size: 13.5px; color: #c6ccd4; }
+.masthead .meta { margin: 6px 0 0; font-size: 12px; color: #98a2ae; font-family: var(--mono); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button {
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px;
+  border: 1px solid #454d57; background: #262b31; color: #eef1f4; cursor: pointer;
+}
+.actions button:hover { background: #333a42; }
+.actions button.danger { border-color: #7a3a3a; color: #ffd9d9; }
+.actions button.danger:hover { background: #4a2626; }
+
+/* ---------- sticky summary ---------- */
+.summary-bar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); box-shadow: 0 1px 3px rgba(16,20,26,.06); }
+.summary-inner {
+  max-width: 1120px; margin: 0 auto; padding: 12px 20px;
+  display: flex; flex-wrap: wrap; gap: 28px; align-items: baseline;
+}
+.stat { display: flex; flex-direction: column; gap: 1px; }
+.stat-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.stat-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-primary .stat-value { font-size: 30px; color: var(--accent); line-height: 1.1; }
+.stat-note { font-size: 11.5px; color: var(--ink-soft); }
+.save-state { margin-left: auto; font-size: 12px; color: var(--ink-faint); align-self: center; }
+
+/* ---------- notices ---------- */
+.notice { border-radius: var(--radius); padding: 12px 14px; margin: 0 0 16px; font-size: 14px; border: 1px solid; }
+.notice.error { background: var(--danger-soft); border-color: #e7bcbc; color: #6d1a1a; }
+.notice.warn { background: var(--warn-soft); border-color: #ecd9a8; color: var(--warn); }
+.notice code { font-family: var(--mono); font-size: 13px; }
+
+/* ---------- toolbar ---------- */
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field span { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.field input {
+  font: inherit; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 6px;
+  min-width: 260px; background: #fff; color: inherit;
+}
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-soft); }
+.yearnav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.yearnav a {
+  font-size: 12.5px; padding: 5px 10px; border-radius: 999px; text-decoration: none;
+  color: var(--ink-soft); border: 1px solid var(--rule); background: #fbfcfd;
+}
+.yearnav a:hover { border-color: var(--accent); color: var(--accent); }
+
+.rule-note {
+  background: var(--accent-soft); border: 1px solid #cfe5d8; color: #15492c;
+  padding: 12px 14px; border-radius: var(--radius); font-size: 13.5px; margin: 0 0 20px;
+}
+
+/* ---------- year / semester ---------- */
+.year { margin-bottom: 26px; scroll-margin-top: 96px; }
+.year > h2 {
+  margin: 0 0 10px; font-size: 15px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-soft); border-bottom: 2px solid var(--ink); padding-bottom: 6px;
+}
+.semester {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  margin-bottom: 12px; overflow: hidden;
+}
+.semester > header {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between;
+  padding: 10px 14px; background: #fafbfc; border-bottom: 1px solid var(--rule);
+}
+.semester h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.semester .sem-summary { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.semester .sem-summary b { color: var(--accent); font-size: 14px; }
+
+.group-head {
+  padding: 8px 14px; font-size: 12.5px; color: var(--ink-soft);
+  background: #fcfdfe; border-bottom: 1px solid var(--rule-soft);
+}
+.group-head strong { color: var(--ink); }
+.group-head.elective { background: var(--warn-soft); color: var(--warn); border-bottom-color: #ecd9a8; }
+
+/* ---------- course table ---------- */
+table.courses { width: 100%; border-collapse: collapse; }
+table.courses th, table.courses td { padding: 7px 14px; text-align: left; border-bottom: 1px solid var(--rule-soft); }
+table.courses thead th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint);
+  font-weight: 600; background: #fff;
+}
+table.courses tbody tr:last-child td { border-bottom: none; }
+table.courses tr.active { background: var(--accent-soft); }
+table.courses tr.blocked { background: var(--warn-soft); }
+table.courses tr.hidden { display: none; }
+.c-code { font-family: var(--mono); font-size: 13px; white-space: nowrap; font-weight: 600; }
+.c-title { color: var(--ink-soft); }
+.c-title .unknown { color: var(--ink-faint); font-style: italic; }
+.c-note { display: block; font-size: 11.5px; color: var(--warn); margin-top: 2px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.num { font-family: var(--mono); font-size: 13px; }
+.dash { color: var(--ink-faint); }
+select.grade {
+  font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid var(--rule);
+  border-radius: 5px; background: #fff; color: inherit;
+  /* Sized for a finger, not just a mouse: comfortable on tablets too. */
+  min-width: 68px; min-height: 40px;
+}
+select.grade.set { border-color: var(--accent); font-weight: 600; color: var(--accent); }
+select.grade.set[data-grade="F"] { border-color: var(--danger); color: var(--danger); }
+input.units-input {
+  font: inherit; font-size: 13px; width: 56px; padding: 3px 6px; text-align: right;
+  border: 1px solid #d8bd7e; border-radius: 5px; background: #fff;
+}
+.legacy { font-size: 11px; color: var(--ink-faint); font-family: var(--mono); }
+
+/* ---------- year totals ---------- */
+.totals-panel { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; margin-top: 28px; }
+.totals-panel h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); }
+table.totals { width: 100%; border-collapse: collapse; }
+table.totals th, table.totals td { padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+table.totals thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); }
+table.totals tfoot th, table.totals tfoot td { border-top: 2px solid var(--ink); border-bottom: none; padding-top: 10px; font-weight: 600; }
+table.totals td.num { font-family: var(--mono); font-size: 13px; }
+table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; }
+
+.colophon { margin-top: 28px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; }
+.colophon code { font-family: var(--mono); }
+
+/* ================================================================
+   Small screens — Firefox and Chrome on Android, Safari/Chrome on iOS.
+
+   Under 760px the six-column course table is re-laid out as a stack of
+   cards, one per course, using CSS grid areas. Nothing about the markup
+   or the calculation changes: only the presentation does.
+   ================================================================ */
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+
+  main { padding: 16px 12px calc(56px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---- masthead ---- */
+  .masthead-inner {
+    padding: 14px 14px;
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+    flex-direction: column; gap: 12px;
+  }
+  .masthead h1 { font-size: 18px; }
+  .masthead .sub { font-size: 12.5px; }
+  .masthead .meta { font-size: 11px; }
+  .actions { width: 100%; }
+  .actions button { flex: 1 1 0; min-height: 40px; font-size: 13px; padding: 8px 10px; }
+
+  /* ---- sticky summary: GPA large, the rest on one compact line ---- */
+  .summary-inner {
+    padding: 10px 14px;
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+    gap: 6px 18px; align-items: center;
+  }
+  .stat-primary { flex: 1 0 100%; flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .stat-primary .stat-label { order: 1; }
+  .stat-primary .stat-value { order: 0; font-size: 34px; }
+  .stat-primary .stat-note { order: 2; flex: 1 0 100%; }
+  .stat:not(.stat-primary) { flex-direction: row; align-items: baseline; gap: 6px; }
+  .stat:not(.stat-primary) .stat-label { font-size: 10.5px; }
+  .stat:not(.stat-primary) .stat-value { font-size: 15px; }
+  .save-state { flex: 1 0 100%; margin-left: 0; font-size: 11px; }
+
+  /* ---- toolbar ---- */
+  .toolbar { padding: 12px; gap: 12px; }
+  .field, .field input { width: 100%; min-width: 0; }
+  .field input { min-height: 42px; font-size: 16px; }   /* 16px stops iOS zooming in */
+  .check { width: 100%; min-height: 34px; }
+  .check input { width: 20px; height: 20px; }
+  .yearnav { margin-left: 0; width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .yearnav a { white-space: nowrap; min-height: 36px; display: flex; align-items: center; }
+
+  .rule-note { font-size: 13px; padding: 11px 12px; }
+
+  /* ---- year / semester chrome ---- */
+  .year { scroll-margin-top: 130px; }
+  .semester > header { padding: 10px 12px; gap: 4px; flex-direction: column; align-items: flex-start; }
+  .semester .sem-summary { font-size: 12px; }
+  .group-head { padding: 8px 12px; font-size: 12px; }
+
+  /* ---- each course row becomes a card ---- */
+  table.courses thead { display: none; }
+  table.courses,
+  table.courses tbody,
+  table.courses tr,
+  table.courses td { display: block; width: 100%; }
+
+  table.courses tr {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      "code  code code grade"
+      "title title title grade"
+      "units gp   pt   grade";
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  table.courses tr.hidden { display: none; }
+  table.courses td { padding: 0; border: none; text-align: left; }
+
+  td.c-code   { grid-area: code;  font-size: 14px; }
+  td.c-code .legacy { display: inline; margin-left: 8px; }
+  td.c-title  { grid-area: title; font-size: 13px; line-height: 1.35; }
+  td.c-title .c-note { margin-top: 3px; }
+  td.cell-units { grid-area: units; }
+  td.cell-gp    { grid-area: gp; }
+  td.cell-pt    { grid-area: pt; }
+  td.cell-grade { grid-area: grade; justify-self: end; }
+
+  /* label the bare numbers, since the column headings are gone */
+  td.cell-units::before,
+  td.cell-gp::before,
+  td.cell-pt::before {
+    content: attr(data-label) " ";
+    font-family: system-ui, sans-serif;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+    margin-right: 3px;
+  }
+  td.cell-units, td.cell-gp, td.cell-pt {
+    font-size: 13px; margin-top: 4px; white-space: nowrap; text-align: left;
+  }
+
+  /* comfortable tap targets; 16px text so mobile Safari/Chrome do not zoom */
+  select.grade {
+    font-size: 16px; min-height: 46px; min-width: 76px; padding: 6px 8px; text-align: center;
+  }
+  input.units-input { font-size: 16px; min-height: 36px; width: 68px; }
+
+  /* ---- year totals ---- */
+  .totals-panel { padding: 12px; }
+  table.totals { min-width: 460px; }
+  table.totals th, table.totals td { padding: 8px 8px; font-size: 13px; }
+  table.totals tfoot th { font-size: 12.5px; }
+
+  .notice { font-size: 13px; }
+  .colophon { font-size: 11.5px; }
+}
+
+/* Very narrow phones (iPhone SE and similar). */
+@media (max-width: 400px) {
+  table.courses tr { column-gap: 10px; }
+  .stat-primary .stat-value { font-size: 30px; }
+  select.grade { min-width: 70px; }
+  td.c-code .legacy { display: block; margin-left: 0; }
+}
+
+/* Coarse pointers: keep every control at least 44px tall regardless of width. */
+@media (pointer: coarse) {
+  select.grade { min-height: 44px; }
+  .actions button { min-height: 44px; }
+  .yearnav a { min-height: 38px; }
+}

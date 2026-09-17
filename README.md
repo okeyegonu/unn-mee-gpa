@@ -45,7 +45,7 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 48 calculation, persistence and curriculum tests
+npm test             # 69 calculation, persistence, preference and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
@@ -82,6 +82,41 @@ Three rules matter, and the tests pin all three:
   counts. A student may enter a First Year first-semester result, a Second Year
   second-semester result and a Fourth Year first-semester result and get a GPA
   over exactly those three.
+
+### Reporting precision
+
+GPA figures are shown to two decimal places, which is what the university
+reports. A **Show full precision** checkbox in the toolbar switches every GPA on
+the page — headline, semester strips, year panel — to five places instead. It is
+off by default and remembered per viewer.
+
+Both numbers come from `data/curriculum.json`:
+
+```json
+"reporting": {
+  "gpa_decimal_places": 2,
+  "gpa_full_precision_places": 5
+}
+```
+
+Three deliberate constraints:
+
+- **This is display only.** The GPA is always computed at full double precision
+  from integer quality points and integer units, so more decimal places reveal
+  digits that were already there rather than improving accuracy. Since a GPA is
+  a ratio of two integers, those extra digits are the true quotient, not
+  floating-point debris — there is a test asserting that out to ten places.
+- **The degree classification always uses the two-decimal figure**, whatever the
+  switch is set to, so a student sitting on 2.39500 can never be shown a
+  different class because of a screen setting.
+- **The preference is not academic data.** It lives under its own storage key,
+  `unn-mee-gpa-calculator:prefs`, so it never enters the results record, never
+  rides along in an export, and never travels to another student through an
+  imported file. Resetting results keeps the setting; clearing the setting keeps
+  the results.
+
+An exported file carries both `gpa` and `gpa_full_precision`, so the export never
+depends on how a screen happened to be set.
 
 ---
 

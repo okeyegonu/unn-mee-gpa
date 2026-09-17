@@ -191,6 +191,68 @@ try {
   check('storage holds exactly one record per curriculum version, with no duplicates',
     stored.records === 1 && stored.grades === 4, JSON.stringify(stored));
 
+  // --- The full-precision switch is display-only and remembers itself. ---
+  const precBefore = await readSummary();
+  precBefore.klass = await exec(`return document.getElementById('stat-class').textContent.trim();`);
+  check('the switch starts off, showing the conventional 2 d.p.',
+    (await exec(`return document.getElementById('toggle-precision').checked;`)) === false &&
+    /^\d\.\d{2}$/.test(precBefore.gpa), JSON.stringify(precBefore));
+
+  await exec(`
+    var t = document.getElementById('toggle-precision');
+    t.checked = true;
+    t.dispatchEvent(new Event('change', { bubbles: true }));
+  `);
+  await new Promise((r) => setTimeout(r, 200));
+  const precOn = await exec(`
+    return {
+      gpa: document.getElementById('stat-gpa').textContent.trim(),
+      klass: document.getElementById('stat-class').textContent.trim(),
+      units: document.getElementById('stat-units').textContent.trim(),
+      points: document.getElementById('stat-points').textContent.trim(),
+      semester: document.querySelectorAll('.sem-summary')[0].textContent.trim(),
+      yearGpa: document.querySelectorAll('#year-totals tbody tr')[0].children[4].textContent.trim()
+    };
+  `);
+  check('switching it on shows 5 d.p. everywhere',
+    precOn.gpa === '3.50000' && precOn.yearGpa === '5.00000' && precOn.semester.includes('5.00000'),
+    JSON.stringify(precOn));
+  check('the underlying units and points are untouched',
+    precOn.units === precBefore.units && precOn.points === precBefore.points,
+    `${precBefore.units}/${precBefore.points} -> ${precOn.units}/${precOn.points}`);
+  check('the degree classification does not move',
+    precOn.klass === precBefore.klass, `${precBefore.klass} -> ${precOn.klass}`);
+
+  // It must survive a reload, and must not have contaminated the results record.
+  await go('about:blank');
+  await go(APP);
+  await waitFor(`document.querySelectorAll('tr[data-id]').length > 0`, 'reload after toggling precision');
+  await waitFor(`document.getElementById('stat-courses').textContent.trim() !== '0'`, 'results to load');
+  const precAfter = await exec(`
+    return {
+      checked: document.getElementById('toggle-precision').checked,
+      gpa: document.getElementById('stat-gpa').textContent.trim(),
+      prefsKey: localStorage.getItem('unn-mee-gpa-calculator:prefs'),
+      resultsRecord: Object.keys(JSON.parse(localStorage.getItem('unn-mee-gpa-calculator')).records['unn-mee-beng-5yr@2023.1']).sort().join(',')
+    };
+  `);
+  check('the switch is remembered across a reload',
+    precAfter.checked === true && precAfter.gpa === '3.50000', JSON.stringify(precAfter));
+  check('the preference is stored apart from the results',
+    precAfter.prefsKey === '{"fullPrecision":true}' &&
+    precAfter.resultsRecord === 'curriculum_id,curriculum_version,grades,saved_at,unitOverrides',
+    JSON.stringify(precAfter));
+
+  // Back off again for the remaining checks.
+  await exec(`
+    var t = document.getElementById('toggle-precision');
+    t.checked = false;
+    t.dispatchEvent(new Event('change', { bubbles: true }));
+  `);
+  await new Promise((r) => setTimeout(r, 200));
+  check('switching it back off returns to 2 d.p.',
+    (await readSummary()).gpa === '3.50', JSON.stringify(await readSummary()));
+
   // --- Filtering is display-only and must not disturb the GPA. ---
   await exec(`
     var f = document.getElementById('filter-text');
@@ -221,6 +283,7 @@ try {
 
   // Leave the browser profile clean for a repeat run.
   await exec(`localStorage.removeItem('unn-mee-gpa-calculator');`);
+  await exec(`localStorage.removeItem('unn-mee-gpa-calculator:prefs');`);
 } finally {
   await call('DELETE', `/session/${sid}`).catch(() => {});
 }

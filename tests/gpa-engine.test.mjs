@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
   emptyState, setGrade, setUnitOverride, clearAll,
-  summarise, evaluateCourse, semesterSummaries, yearSummaries, formatGpa, roundGpa,
+  summarise, summariseRows, evaluateCourse, semesterSummaries, yearSummaries, formatGpa, roundGpa,
 } from '../src/gpa-engine.js';
 import { GRADE_POINTS, coursePoint, gradeMatrixForUnits, isValidGrade, normaliseGrade } from '../src/grading.js';
 
@@ -265,4 +265,94 @@ test('GPA is reported to two decimal places, rounded half up', () => {
   assert.equal(formatGpa(1 / 3), '0.33');
   assert.equal(formatGpa(3.005), '3.01');
   assert.equal(formatGpa(null), '—');
+});
+
+/* ------------------------------------------------------------------------
+   Reporting precision (data/curriculum.json -> reporting.gpa_decimal_places).
+
+   This is a DISPLAY setting. The GPA is always computed at full double
+   precision from integer quality points and integer units; raising the number
+   of decimal places reveals more of a figure that was already there, it does
+   not make the arithmetic more accurate.
+   ------------------------------------------------------------------------ */
+
+test('the reporting precision changes the text, never the number', () => {
+  let s = emptyState();
+  s = setGrade(s, 'y1s1-A', 'A');   // 2 units -> 10
+  s = setGrade(s, 'y2s2-B', 'B');   // 3 units -> 12
+  s = setGrade(s, 'y4s1-C', 'C');   // 4 units -> 12
+  const two  = summarise(across, s, { decimals: 2 });
+  const five = summarise(across, s, { decimals: 5 });
+
+  assert.equal(two.units, five.units, 'units are identical');
+  assert.equal(two.points, five.points, 'quality points are identical');
+  assert.equal(two.gpa, five.gpa, 'the underlying GPA is the same number');
+  assert.equal(two.gpaText, '3.78');
+  assert.equal(five.gpaText, '3.77778');
+  assert.equal(five.gpa, 34 / 9);
+});
+
+test('five decimal places across the awkward cases', () => {
+  assert.equal(formatGpa(34 / 9, 5), '3.77778');
+  assert.equal(formatGpa(22 / 5, 5), '4.40000');
+  assert.equal(formatGpa(1 / 3, 5), '0.33333');
+  assert.equal(formatGpa(2 / 3, 5), '0.66667');
+  assert.equal(formatGpa(26 / 9, 5), '2.88889');
+  assert.equal(formatGpa(5, 5), '5.00000');
+  assert.equal(formatGpa(0, 5), '0.00000');
+  assert.equal(formatGpa(null, 5), '—', 'no results still means no GPA');
+});
+
+test('a GPA is a ratio of two integers, so extra places are real, not noise', () => {
+  // points and units are always whole numbers, and IEEE-754 division of two
+  // exactly-represented integers is correctly rounded. Printing more places
+  // therefore shows the true quotient, not floating-point debris.
+  for (const [points, units] of [[34, 9], [26, 9], [10, 3], [47, 21], [1, 7]]) {
+    const shown = Number(formatGpa(points / units, 10));
+    assert.ok(Math.abs(shown - points / units) < 1e-9,
+      `${points}/${units} printed to 10 places should match the quotient`);
+  }
+});
+
+test('precision is clamped to what a Number can express', () => {
+  assert.equal(formatGpa(34 / 9, 0), '4');
+  assert.equal(formatGpa(34 / 9, -3), '4', 'negative clamps to 0');
+  assert.equal(formatGpa(34 / 9, 99).length <= 20, true, 'absurd values do not throw');
+  assert.equal(formatGpa(34 / 9, undefined), '3.78', 'undefined falls back to the default');
+  assert.equal(formatGpa(34 / 9, NaN), '3.78', 'NaN falls back to the default');
+});
+
+test('the default is two decimal places everywhere', () => {
+  let s = setGrade(emptyState(), 'y1s1-A', 'A');
+  s = setGrade(s, 'y2s2-B', 'B');
+  s = setGrade(s, 'y4s1-C', 'C');
+  assert.equal(summarise(across, s).gpaText, '3.78');
+  assert.equal(semesterSummaries(across, s).get('y1s1').gpaText, '5.00');
+  assert.equal(yearSummaries(across, s).get('y2').gpaText, '4.00');
+});
+
+test('semester and year panels honour the same precision as the headline', () => {
+  let s = setGrade(emptyState(), 'y1s1-A', 'A');
+  s = setGrade(s, 'y2s2-B', 'B');
+  s = setGrade(s, 'y4s1-C', 'C');
+  const opts = { decimals: 5 };
+  assert.equal(summarise(across, s, opts).gpaText, '3.77778');
+  assert.equal(semesterSummaries(across, s, opts).get('y1s1').gpaText, '5.00000');
+  assert.equal(yearSummaries(across, s, opts).get('y4').gpaText, '3.00000');
+});
+
+test('the degree classification never moves when precision changes', () => {
+  // 2.395 is just under the Second Class Lower boundary of 2.4. Showing more
+  // decimal places must not reclassify anybody.
+  let s = emptyState();
+  const two = summariseRows([
+    { active: true, units: 200, coursePoint: 479, blocked: false },
+  ], { decimals: 2 });
+  const five = summariseRows([
+    { active: true, units: 200, coursePoint: 479, blocked: false },
+  ], { decimals: 5 });
+  assert.equal(two.gpaText, '2.40');
+  assert.equal(five.gpaText, '2.39500');
+  assert.equal(two.classification, five.classification,
+    'the class comes from the conventional 2 d.p. figure in both cases');
 });

@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ResultsRepository, MemoryBackend, STORAGE_KEY } from '../src/storage.js';
+import { ResultsRepository, MemoryBackend, PreferencesStore, STORAGE_KEY, PREFS_KEY } from '../src/storage.js';
 import { emptyState, setGrade, setUnitOverride, summarise } from '../src/gpa-engine.js';
 
 const CID = 'unn-mee-beng-5yr';
@@ -222,4 +222,83 @@ test('import from a different curriculum version is flagged, not silently accept
   });
   assert.equal(round.versionMismatch, true);
   assert.equal(round.importedVersion, '2023.1');
+});
+
+/* ---- display preferences: kept apart from academic results ---- */
+
+test('a display preference persists across a reload', async () => {
+  const backend = new MemoryBackend();
+  new PreferencesStore({ backend }).set('fullPrecision', true);
+  assert.equal(new PreferencesStore({ backend }).get('fullPrecision'), true);
+  new PreferencesStore({ backend }).set('fullPrecision', false);
+  assert.equal(new PreferencesStore({ backend }).get('fullPrecision'), false);
+});
+
+test('an unset preference falls back to the supplied default', () => {
+  const prefs = new PreferencesStore({ backend: new MemoryBackend() });
+  assert.equal(prefs.get('fullPrecision', false), false);
+  assert.equal(prefs.get('neverSet', 'fallback'), 'fallback');
+  assert.equal(prefs.get('neverSet'), undefined);
+});
+
+test('setting one preference leaves the others alone', () => {
+  const backend = new MemoryBackend();
+  const prefs = new PreferencesStore({ backend });
+  prefs.set('fullPrecision', true);
+  prefs.set('somethingElse', 'x');
+  prefs.set('fullPrecision', false);
+  assert.deepEqual(prefs.read(), { fullPrecision: false, somethingElse: 'x' });
+});
+
+test('preferences never leak into the results record or an export', async () => {
+  const backend = new MemoryBackend();
+  new PreferencesStore({ backend }).set('fullPrecision', true);
+
+  const repo = new ResultsRepository({ backend, curriculumId: CID, curriculumVersion: V });
+  const state = setGrade((await repo.load()).state, 'y1s1-MTH101', 'A');
+  await repo.save(state);
+
+  const record = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+  assert.deepEqual(Object.keys(record).sort(),
+    ['curriculum_id', 'curriculum_version', 'grades', 'saved_at', 'unitOverrides']);
+  assert.ok(!('fullPrecision' in record));
+
+  const payload = await repo.exportPayload(state);
+  assert.ok(!('fullPrecision' in payload), 'an export carries results, not screen settings');
+});
+
+test('clearing results does not clear display preferences, and vice versa', async () => {
+  const backend = new MemoryBackend();
+  const prefs = new PreferencesStore({ backend });
+  prefs.set('fullPrecision', true);
+  const repo = new ResultsRepository({ backend, curriculumId: CID, curriculumVersion: V });
+  await repo.save(setGrade(emptyState(), 'y1s1-MTH101', 'A'));
+
+  await repo.clear();
+  assert.equal(prefs.get('fullPrecision'), true, 'a results reset keeps the screen setting');
+
+  await repo.save(setGrade(emptyState(), 'y1s1-MTH101', 'B'));
+  prefs.clear();
+  assert.deepEqual((await repo.load()).state.grades, { 'y1s1-MTH101': 'B' },
+    'clearing preferences keeps the results');
+});
+
+test('preferences degrade quietly when storage is unusable', () => {
+  const hostile = {
+    getItem() { throw new Error('SecurityError'); },
+    setItem() { throw new Error('QuotaExceededError'); },
+    removeItem() { throw new Error('SecurityError'); },
+  };
+  const prefs = new PreferencesStore({ backend: hostile });
+  assert.deepEqual(prefs.read(), {}, 'a blocked read yields defaults, not a crash');
+  assert.equal(prefs.get('fullPrecision', false), false);
+  assert.doesNotThrow(() => prefs.set('fullPrecision', true));
+  assert.doesNotThrow(() => prefs.clear());
+});
+
+test('corrupt preference data is ignored rather than fatal', () => {
+  for (const junk of ['not json', '[]', 'null', '"a string"', '']) {
+    const prefs = new PreferencesStore({ backend: new MemoryBackend({ [PREFS_KEY]: junk }) });
+    assert.deepEqual(prefs.read(), {}, `junk: ${junk}`);
+  }
 });

@@ -12,7 +12,7 @@ import {
   emptyState, setGrade, setUnitOverride, clearAll,
   evaluateCourse, summarise, semesterSummaries, yearSummaries, formatGpa,
 } from './gpa-engine.js';
-import { ResultsRepository } from './storage.js';
+import { ResultsRepository, PreferencesStore } from './storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -24,6 +24,8 @@ const els = {
   yearnav: $('#yearnav'),
   filterText: $('#filter-text'),
   filterEntered: $('#filter-entered'),
+  togglePrecision: $('#toggle-precision'),
+  togglePrecisionLabel: $('#toggle-precision-label'),
   gpa: $('#stat-gpa'),
   klass: $('#stat-class'),
   courses: $('#stat-courses'),
@@ -43,6 +45,8 @@ const els = {
 };
 
 let doc = null;         // the curriculum document
+let prefs = null;       // display preferences, per viewer
+let precision = { normal: 2, full: 5 };   // from reporting.* in the data file
 let courses = [];       // flat course records
 let state = null;       // { curriculumVersion, grades, unitOverrides }
 let repo = null;
@@ -73,6 +77,11 @@ async function boot() {
   }
 
   courses = flattenCurriculum(doc);
+  precision = {
+    normal: doc.reporting?.gpa_decimal_places ?? 2,
+    full: doc.reporting?.gpa_full_precision_places ?? 5,
+  };
+  prefs = new PreferencesStore();
   repo = new ResultsRepository({
     curriculumId: doc.curriculum_id,
     curriculumVersion: doc.curriculum_version,
@@ -257,6 +266,16 @@ function wireGlobalControls() {
   els.filterText.addEventListener('input', applyFilter);
   els.filterEntered.addEventListener('change', applyFilter);
 
+  els.togglePrecisionLabel.textContent = `Show full precision (${precision.full} d.p.)`;
+  els.togglePrecision.title =
+    `The GPA is always calculated at full precision; this shows ${precision.full} decimal places ` +
+    `instead of the usual ${precision.normal}. Your degree classification is unaffected.`;
+  els.togglePrecision.checked = prefs.get('fullPrecision', false) === true;
+  els.togglePrecision.addEventListener('change', () => {
+    prefs.set('fullPrecision', els.togglePrecision.checked);
+    refreshAll();
+  });
+
   els.btnExport.addEventListener('click', async () => {
     const payload = await repo.exportPayload(state, {
       institution: doc.institution,
@@ -327,6 +346,11 @@ function applyFilter() {
 
 /* -------------------------------------------------------------- rendering */
 
+/** The reporting precision currently in force: the switch decides. */
+function reportOpts() {
+  return { decimals: els.togglePrecision.checked ? precision.full : precision.normal };
+}
+
 function refreshAll() {
   // Per-course rows.
   for (const [, ref] of rowRefs) {
@@ -364,7 +388,7 @@ function refreshAll() {
   }
 
   // Semester strips.
-  const sems = semesterSummaries(courses, state);
+  const sems = semesterSummaries(courses, state, reportOpts());
   for (const k of semesterKeys(doc)) {
     const key = `y${k.year}s${k.semester}`;
     const el = semRefs.get(key);
@@ -376,7 +400,7 @@ function refreshAll() {
   }
 
   // Year totals table.
-  const years = yearSummaries(courses, state);
+  const years = yearSummaries(courses, state, reportOpts());
   els.yearTotals.innerHTML = '';
   for (const y of doc.years) {
     const s = years.get(`y${y.year}`);
@@ -391,7 +415,7 @@ function refreshAll() {
   }
 
   // Cumulative.
-  const total = summarise(courses, state);
+  const total = summarise(courses, state, reportOpts());
   els.gpa.textContent = total.gpaText;
   els.klass.textContent = total.gradedCourses ? (total.classification ?? '') : 'no results entered yet';
   els.courses.textContent = String(total.gradedCourses);
@@ -416,8 +440,14 @@ function refreshAll() {
 }
 
 function publicSummary() {
-  const t = summarise(courses, state);
-  return { graded_courses: t.gradedCourses, units: t.units, quality_points: t.points, gpa: formatGpa(t.gpa) };
+  const t = summarise(courses, state, reportOpts());
+  return {
+    graded_courses: t.gradedCourses,
+    units: t.units,
+    quality_points: t.points,
+    gpa: formatGpa(t.gpa, precision.normal),
+    gpa_full_precision: formatGpa(t.gpa, precision.full),
+  };
 }
 
 function offerCarryOver(others) {

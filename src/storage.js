@@ -199,3 +199,52 @@ export class ResultsRepository {
     };
   }
 }
+
+/**
+ * Display preferences — separate from results, on purpose.
+ *
+ * A preference like "show full precision" is about this viewer's screen, not
+ * about their academic record. Keeping it under its own key means it is never
+ * swept into an export, never carried between students by an imported file, and
+ * never versioned against the curriculum. Losing it costs nothing.
+ */
+export const PREFS_KEY = 'unn-mee-gpa-calculator:prefs';
+
+export class PreferencesStore {
+  constructor({ backend, key = PREFS_KEY } = {}) {
+    this.backend = backend ?? defaultBackend();
+    this.key = key;
+  }
+
+  /** Never throws: a blocked or corrupt store simply yields the defaults. */
+  read() {
+    try {
+      const raw = this.backend.getItem(this.key);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  get(name, fallback = undefined) {
+    const v = this.read()[name];
+    return v === undefined ? fallback : v;
+  }
+
+  /** UPSERT one preference, leaving the others alone. */
+  set(name, value) {
+    try {
+      const next = { ...this.read(), [name]: value };
+      this.backend.setItem(this.key, JSON.stringify(next));
+      return next;
+    } catch {
+      return this.read();   // private browsing, quota, blocked storage: ignore
+    }
+  }
+
+  clear() {
+    try { this.backend.removeItem(this.key); } catch { /* nothing to do */ }
+  }
+}

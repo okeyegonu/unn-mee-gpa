@@ -56,16 +56,37 @@ export function evaluateAll(courses, state) {
   return courses.map((c) => evaluateCourse(c, state));
 }
 
-/** Round to two decimal places, the conventional GPA presentation. */
-export function roundGpa(value) {
+/**
+ * How many decimal places a GPA is reported to. Two is the conventional
+ * presentation and the default; the interface overrides it from
+ * `reporting.gpa_decimal_places` in the curriculum file.
+ *
+ * Note that this is a *reporting* setting only. The GPA itself is always
+ * computed at full double precision from integer points and integer units, so
+ * raising this number reveals more of a figure that was already there — it does
+ * not make the calculation more accurate.
+ */
+export const DEFAULT_GPA_DECIMALS = 2;
+
+/** Clamp a requested precision to something a Number can actually express. */
+function decimalsOrDefault(dp) {
+  if (!Number.isFinite(dp)) return DEFAULT_GPA_DECIMALS;
+  return Math.min(Math.max(Math.trunc(dp), 0), 15);
+}
+
+/** Round a GPA to the reporting precision. */
+export function roundGpa(value, dp = DEFAULT_GPA_DECIMALS) {
   if (value === null || value === undefined || !Number.isFinite(value)) return null;
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  const places = decimalsOrDefault(dp);
+  const factor = 10 ** places;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 /** Format a GPA for display; an empty set of active courses has no GPA. */
-export function formatGpa(value) {
-  const r = roundGpa(value);
-  return r === null ? '—' : r.toFixed(2);
+export function formatGpa(value, dp = DEFAULT_GPA_DECIMALS) {
+  const places = decimalsOrDefault(dp);
+  const r = roundGpa(value, places);
+  return r === null ? '—' : r.toFixed(places);
 }
 
 /**
@@ -73,7 +94,7 @@ export function formatGpa(value) {
  * Only `active` rows contribute anything at all: an unentered course adds
  * 0 units to the denominator and 0 points to the numerator.
  */
-export function summariseRows(rows) {
+export function summariseRows(rows, { decimals = DEFAULT_GPA_DECIMALS } = {}) {
   let gradedCourses = 0;
   let units = 0;
   let points = 0;
@@ -91,16 +112,18 @@ export function summariseRows(rows) {
     units,
     points,
     gpa,
-    gpaRounded: roundGpa(gpa),
-    gpaText: formatGpa(gpa),
-    classification: classOfDegree(roundGpa(gpa)),
+    gpaRounded: roundGpa(gpa, decimals),
+    gpaText: formatGpa(gpa, decimals),
+    // Classification always uses the conventional 2 d.p. figure, so that a
+    // reporting-precision change can never move a student between classes.
+    classification: classOfDegree(roundGpa(gpa, DEFAULT_GPA_DECIMALS)),
     blocked,
   };
 }
 
 /** Cumulative summary over every course for which a grade has been entered. */
-export function summarise(courses, state) {
-  return summariseRows(evaluateAll(courses, state));
+export function summarise(courses, state, options) {
+  return summariseRows(evaluateAll(courses, state), options);
 }
 
 /**
@@ -108,7 +131,7 @@ export function summarise(courses, state) {
  * Used purely for reporting: semester GPA, year GPA, and so on. The bucket key
  * has no influence on whether a course is active.
  */
-export function summariseBy(courses, state, keyFn) {
+export function summariseBy(courses, state, keyFn, options) {
   const rows = evaluateAll(courses, state);
   const buckets = new Map();
   for (const r of rows) {
@@ -117,18 +140,18 @@ export function summariseBy(courses, state, keyFn) {
     buckets.get(key).push(r);
   }
   const out = new Map();
-  for (const [key, list] of buckets) out.set(key, summariseRows(list));
+  for (const [key, list] of buckets) out.set(key, summariseRows(list, options));
   return out;
 }
 
 /** Convenience: GPA per semester, keyed "y<year>s<semester>". */
-export function semesterSummaries(courses, state) {
-  return summariseBy(courses, state, (c) => `y${c.year}s${c.semester}`);
+export function semesterSummaries(courses, state, options) {
+  return summariseBy(courses, state, (c) => `y${c.year}s${c.semester}`, options);
 }
 
 /** Convenience: GPA per academic year, keyed "y<year>". */
-export function yearSummaries(courses, state) {
-  return summariseBy(courses, state, (c) => `y${c.year}`);
+export function yearSummaries(courses, state, options) {
+  return summariseBy(courses, state, (c) => `y${c.year}`, options);
 }
 
 /** An empty, valid state object. */

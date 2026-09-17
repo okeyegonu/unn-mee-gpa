@@ -9,6 +9,11 @@
   "award": "B.Eng.",
   "programme_track": "Five-Year Undergraduate Programme",
   "grade_scale": { "A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0 },
+  "reporting": {
+    "gpa_decimal_places": 2,
+    "gpa_full_precision_places": 5,
+    "_comment": "gpa_decimal_places is the everyday presentation (2 is what the university reports). gpa_full_precision_places is what the 'Show full precision' switch in the interface reveals. Both are display settings only - the GPA is always computed at full precision from integer points and integer units, so more places expose digits that were already there rather than improving accuracy. The degree classification always uses the gpa_decimal_places figure, so the switch can never move a student between classes."
+  },
   "sources": [
     {
       "source_id": "jpeg-first-year",

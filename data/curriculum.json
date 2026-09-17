@@ -15,7 +15,7 @@
     "repeat_attempts_rule": "maximum_years_to_graduate - course_year",
     "failing_grades": ["F"],
     "_comment": "A course is repeated only after it is failed. Once it is passed it cannot be taken again, so a sequence of sittings always ends at the first pass. Within that rule, a course first taken in year x may be repeated in each remaining year up to the maximum of 8, giving (8 - x) repeat attempts and (9 - x) sittings in total: 8 for a First Year course, 4 for a Fifth Year course. Every sitting counts separately in the GPA - its units enter the denominator again and its points enter the numerator again - so repeating a course degrades the GPA in the same way that taking an extra course would.",
-    "_failing_grades_note": "Only F is treated as a failure here, because F = 0 points is the unambiguous case. If the department also requires a course graded E to be repeated, add \"E\" to failing_grades; nothing else needs to change."
+    "_failing_grades_note": "Confirmed with the department on 2026-09-17: E is a pass, and only F mandates a re-sit. A course graded E is therefore closed and cannot be taken again. Should this ever change, adding a grade to failing_grades is the only edit needed."
   },
   "reporting": {
     "gpa_decimal_places": 2,

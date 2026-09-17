@@ -115,10 +115,11 @@ Correcting an earlier sitting to a pass drops the sittings after it, in the
 stored state as well as on screen.
 
 Which grades count as failures is `progression.failing_grades` in
-`data/curriculum.json`. It is `["F"]`, because F = 0 points is the unambiguous
-case. **If the department also requires a course graded E to be repeated, add
-`"E"` to that list** — nothing else needs to change, and there is a test
-covering both settings.
+`data/curriculum.json`. It is `["F"]`: confirmed with the department on
+17 September 2026 that **E is a pass** and only F mandates a re-sit, so a course
+graded E is closed and cannot be taken again. Should that ever change, adding a
+grade to that list is the only edit needed, and there is a test covering both
+settings.
 
 **The allowance** then caps how many failures a student can sit through. A course
 first taken in year *x* may be repeated in each remaining year up to the

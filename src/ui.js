@@ -433,11 +433,11 @@ function refreshAll() {
     }
 
     // How many grade controls this row needs: one per sitting so far, plus a
-    // blank one to sit the course again — but only while repeats are on show
-    // and the course still has room within its allowance.
-    const roomLeft = ev.attemptCount < ev.maxAttempts;
+    // blank one to sit the course again — offered only while repeats are on
+    // show, the last sitting was a failure, and the year's allowance has room.
+    // A passed course is closed: it cannot be taken again.
     const wanted = repeatsVisible()
-      ? Math.max(1, ev.attemptCount + (roomLeft ? 1 : 0))
+      ? Math.max(1, ev.attemptCount + (ev.canAddAttempt ? 1 : 0))
       : 1;
     syncSelects(ref, wanted);
 
@@ -454,9 +454,12 @@ function refreshAll() {
       wrap.classList.toggle('pending', !g);
     });
     ref.stack.classList.toggle('multi', wanted > 1);
-    ref.stack.title = wanted > 1
-      ? `Every sitting counts separately. This course allows up to ${ev.maxAttempts} sittings.`
-      : '';
+    ref.stack.title = ev.passed && ev.attemptCount > 1
+      ? `Passed at sitting ${ev.attemptCount}. A passed course cannot be taken again.`
+      : wanted > 1
+        ? `Every sitting counts separately. This course allows up to ${ev.maxAttempts} sittings, ` +
+          `and stops as soon as it is passed.`
+        : '';
 
     // Units and points reflect every sitting.
     if (!ref.course.unitsUnknown) {
@@ -470,6 +473,8 @@ function refreshAll() {
     ref.tr.classList.toggle('active', ev.active);
     ref.tr.classList.toggle('blocked', ev.blocked);
     ref.tr.classList.toggle('repeated', ev.repeatCount > 0);
+    ref.tr.classList.toggle('exhausted',
+      !ev.passed && ev.attemptCount >= ev.maxAttempts && ev.attemptCount > 0);
   }
 
   // Semester strips.

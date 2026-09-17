@@ -186,6 +186,8 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
 .attempt.pending select.grade { border-style: dashed; color: var(--ink-faint); }
 
 table.courses tr.repeated { background: #fdf6e8; }
+/* Every sitting used up and still not passed. */
+table.courses tr.exhausted { background: var(--danger-soft); }
 table.courses tr.repeated.active { background: #f6f2e4; }
 
 /* The units cell shows base x sittings when a course was sat more than once. */

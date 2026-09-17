@@ -45,16 +45,17 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 94 calculation, repeat, persistence, preference and curriculum tests
+npm test             # 106 calculation, repeat, persistence, preference and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
+npm run smoke:repeats# end-to-end checks for repeat sittings
 npm run smoke:mobile # the same at three phone viewports
 npm run smoke:offline# test the single-file build opened from file://
 ```
 
-The three `smoke` targets need `geckodriver --port 4444` running in another
-terminal and, for the first two, the app being served on port 8000.
+The `smoke` targets need `geckodriver --port 4444` running in another terminal
+and, for all but `smoke:offline`, the app being served on port 8000.
 
 ---
 
@@ -78,7 +79,8 @@ Three rules matter, and the tests pin all three:
   stay in the denominator. `2 units A` plus `3 units F` is 10 ÷ 5 = **2.00**,
   not 5.00.
 - **A repeated course counts once per sitting.** Failing a 3-unit course and
-  passing it next time contributes 6 units and 12 points, not 3 and 12. See
+  passing it next time contributes 6 units and 12 points, not 3 and 12. A course
+  is repeated only on failure — once passed it cannot be taken again. See
   *Repeat sittings* below.
 - **Year and semester are labels, not rules.** They group the display and drive
   the per-semester and per-year panels. They never decide whether a course
@@ -104,9 +106,23 @@ to the programme — there is a test asserting that equivalence directly.
 A 3-unit course failed once and then passed with a B contributes 6 units and
 12 points, so that B is worth **2.00**, not 4.00.
 
-**The allowance.** A course first taken in year *x* may be repeated in each
-remaining year up to the programme maximum, giving `(8 - x)` repeats and
-`(9 - x)` sittings in total:
+**A course is repeated only after it is failed.** Once it is passed it cannot be
+taken again, so a sequence of sittings always ends at the first pass. The
+interface offers a box for the next sitting only where the last one was a
+failure, and the engine disregards anything recorded after a pass — so even a
+hand-edited file cannot manufacture an extra sitting of a course already passed.
+Correcting an earlier sitting to a pass drops the sittings after it, in the
+stored state as well as on screen.
+
+Which grades count as failures is `progression.failing_grades` in
+`data/curriculum.json`. It is `["F"]`, because F = 0 points is the unambiguous
+case. **If the department also requires a course graded E to be repeated, add
+`"E"` to that list** — nothing else needs to change, and there is a test
+covering both settings.
+
+**The allowance** then caps how many failures a student can sit through. A course
+first taken in year *x* may be repeated in each remaining year up to the
+programme maximum, giving `(8 - x)` repeats and `(9 - x)` sittings in total:
 
 | Year | Sittings allowed | Repeats |
 |---|---:|---:|
@@ -205,6 +221,7 @@ gpa-calculator/
 │   ├── validate-curriculum.mjs     validation report generator
 │   ├── build-single-file.mjs       the offline single-file build
 │   ├── browser-smoke.mjs           end-to-end test in real Firefox
+│   ├── repeat-smoke.mjs            end-to-end checks for repeat sittings
 │   ├── mobile-smoke.mjs            phone-viewport layout checks
 │   └── file-url-smoke.mjs          offline-copy checks
 │

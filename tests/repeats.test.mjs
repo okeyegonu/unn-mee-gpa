@@ -274,3 +274,134 @@ test('worked example: a student who repeats across the full eight years', () => 
   assert.equal(rc.gpaText, '4.22');
   assert.ok(r.gpa < rc.gpa, 'the repeats cost this student 1.84 points of GPA');
 });
+
+/* --------------------------------------------------------------------------
+   A passed course cannot be taken again.
+
+   At UNN a course is repeated only on failure. A sequence of sittings therefore
+   always ends at the first pass, and the allowance simply caps how many
+   failures a student can sit through.
+   -------------------------------------------------------------------------- */
+
+/** F is the only failing grade unless the curriculum file says otherwise. */
+const P = (id, units, maxAttempts = 8, failingGrades = ['F']) =>
+  ({ id, code: id, title: id, units, year: 1, semester: 1, maxAttempts, failingGrades });
+
+test('only F is treated as a failure, by configuration', () => {
+  assert.deepEqual(doc.progression.failing_grades, ['F']);
+  assert.deepEqual(byId.get('y1s1-MTH101').failingGrades, ['F']);
+});
+
+test('a course passed first time offers no further sitting', () => {
+  for (const pass of ['A', 'B', 'C', 'D', 'E']) {
+    const c = P('c1', 3);
+    const s = setGrade(emptyState(), 'c1', pass);
+    const ev = evaluateCourse(c, s);
+    assert.equal(ev.passed, true, `${pass} is a pass`);
+    assert.equal(ev.canAddAttempt, false, `${pass} must close the course`);
+    assert.equal(ev.attemptCount, 1);
+  }
+});
+
+test('a failed course does offer another sitting', () => {
+  const c = P('c1', 3);
+  const ev = evaluateCourse(c, setGrade(emptyState(), 'c1', 'F'));
+  assert.equal(ev.passed, false);
+  assert.equal(ev.canAddAttempt, true);
+});
+
+test('the sequence stops at the first pass, whatever else is recorded', () => {
+  const c = P('c1', 3);
+  // A hand-edited file claiming sittings after a pass.
+  const s = { ...emptyState(), grades: { c1: 'F' }, repeats: { c1: ['C', 'A', 'B'] } };
+  assert.deepEqual(attemptsOf(c, s), ['F', 'C'], 'everything after the pass is disregarded');
+  const r = summarise([c], s);
+  assert.equal(r.units, 6, 'two sittings, not four');
+  assert.equal(r.points, 9);
+  assert.equal(r.gpaText, '1.50');
+});
+
+test('a passed first sitting cannot be given repeats at all', () => {
+  const c = P('c1', 3);
+  const s = { ...emptyState(), grades: { c1: 'B' }, repeats: { c1: ['A', 'A'] } };
+  assert.deepEqual(attemptsOf(c, s), ['B']);
+  assert.equal(summarise([c], s).units, 3);
+  assert.equal(summarise([c], s).gpaText, '4.00');
+});
+
+test('recording a pass closes the course and drops later sittings', () => {
+  const c = P('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  s = setAttempt(s, c, 1, 'F');
+  s = setAttempt(s, c, 2, 'F');
+  assert.equal(evaluateCourse(c, s).attemptCount, 3);
+
+  s = setAttempt(s, c, 1, 'C');    // the second sitting was actually a pass
+  assert.deepEqual(attemptsOf(c, s), ['F', 'C'], 'the third sitting can no longer exist');
+  assert.deepEqual(s.repeats, { c1: ['C'] }, 'and it is not left lying in storage');
+  assert.equal(evaluateCourse(c, s).canAddAttempt, false);
+});
+
+test('correcting the first sitting to a pass removes every repeat', () => {
+  const c = P('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'F');
+  s = setAttempt(s, c, 1, 'F');
+  s = setAttempt(s, c, 2, 'B');
+  assert.equal(summarise([c], s).units, 9);
+
+  s = setAttempt(s, c, 0, 'A');    // it was passed first time after all
+  assert.deepEqual(attemptsOf(c, s), ['A']);
+  assert.deepEqual(s.repeats, {});
+  assert.equal(summarise([c], s).units, 3);
+  assert.equal(summarise([c], s).gpaText, '5.00');
+});
+
+test('correcting a pass back to a failure re-opens the course', () => {
+  const c = P('c1', 3);
+  let s = setGrade(emptyState(), 'c1', 'C');
+  assert.equal(evaluateCourse(c, s).canAddAttempt, false);
+  s = setGrade(s, 'c1', 'F', c);
+  assert.equal(evaluateCourse(c, s).canAddAttempt, true);
+});
+
+test('addAttempt refuses to re-sit a passed course', () => {
+  const c = P('c1', 3);
+  const passed = setGrade(emptyState(), 'c1', 'B');
+  assert.deepEqual(addAttempt(passed, c, 'A').repeats ?? {}, {});
+  const failed = setGrade(emptyState(), 'c1', 'F');
+  assert.deepEqual(addAttempt(failed, c, 'A').repeats, { c1: ['A'] });
+});
+
+test('the allowance caps a run of failures, and the pass ends it', () => {
+  const c = byId.get('y5s1-MEE511');            // 3 units, 4 sittings
+  let s = setGrade(emptyState(), c.id, 'F');
+  s = setAttempt(s, c, 1, 'F');
+  s = setAttempt(s, c, 2, 'F');
+  assert.equal(evaluateCourse(c, s).canAddAttempt, true, 'three failures, one sitting left');
+  s = setAttempt(s, c, 3, 'D');
+  const ev = evaluateCourse(c, s);
+  assert.equal(ev.attemptCount, 4);
+  assert.equal(ev.passed, true);
+  assert.equal(ev.canAddAttempt, false);
+  assert.equal(summarise([c], s).units, 12);
+  assert.equal(summarise([c], s).points, 6, 'only the D at the fourth sitting scores');
+  assert.equal(summarise([c], s).gpaText, '0.50');
+});
+
+test('a student who exhausts the allowance without passing is not offered more', () => {
+  const c = byId.get('y5s1-MEE511');
+  let s = setGrade(emptyState(), c.id, 'F');
+  for (let i = 1; i < 4; i++) s = setAttempt(s, c, i, 'F');
+  const ev = evaluateCourse(c, s);
+  assert.equal(ev.attemptCount, 4);
+  assert.equal(ev.passed, false);
+  assert.equal(ev.canAddAttempt, false, 'the allowance is spent');
+});
+
+test('treating E as a failure is one configuration change', () => {
+  const strict = P('c1', 3, 8, ['F', 'E']);
+  const lenient = P('c1', 3, 8, ['F']);
+  const s = setGrade(emptyState(), 'c1', 'E');
+  assert.equal(evaluateCourse(lenient, s).canAddAttempt, false, 'E passes by default');
+  assert.equal(evaluateCourse(strict, s).canAddAttempt, true, 'E fails when configured to');
+});

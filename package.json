@@ -11,6 +11,7 @@
     "start": "./serve.sh",
     "smoke": "node tools/browser-smoke.mjs",
     "smoke:mobile": "node tools/mobile-smoke.mjs",
-    "smoke:offline": "node tools/file-url-smoke.mjs"
+    "smoke:offline": "node tools/file-url-smoke.mjs",
+    "smoke:repeats": "node tools/repeat-smoke.mjs"
   }
 }

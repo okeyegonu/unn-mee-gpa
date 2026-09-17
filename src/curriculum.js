@@ -35,6 +35,13 @@ export function flattenCurriculum(doc) {
   const out = [];
   let order = 0;
   const progression = doc.progression ?? null;
+  // Shared by every course, and resolved here so that the GPA engine can decide
+  // whether a sitting was a failure without knowing anything about the data file.
+  const failingGrades = Object.freeze(
+    Array.isArray(progression?.failing_grades) && progression.failing_grades.length > 0
+      ? progression.failing_grades.map((g) => String(g).toUpperCase())
+      : ['F'],
+  );
   for (const year of doc.years ?? []) {
     for (const sem of year.semesters ?? []) {
       for (const group of sem.groups ?? []) {
@@ -61,6 +68,7 @@ export function flattenCurriculum(doc) {
             notes: c.notes ?? null,
             sourceId: sem.source_id ?? null,
             maxAttempts: maxAttemptsForYear(year.year, progression),
+            failingGrades,
             order: order++,
           });
         }

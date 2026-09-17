@@ -28,6 +28,18 @@ export function effectiveUnits(course, state) {
 }
 
 /**
+ * Was this sitting a failure, and therefore does it entitle the student to
+ * another one? Which grades count as failures comes from the curriculum file
+ * (`progression.failing_grades`) and is resolved onto the course.
+ */
+export function isFailingGrade(course, grade) {
+  const g = normaliseGrade(grade);
+  if (g === NOT_ENTERED) return false;
+  const failing = course?.failingGrades ?? ['F'];
+  return failing.includes(g);
+}
+
+/**
  * Every sitting of a course, in order, as a list of valid grades.
  *
  * The first sitting lives in `state.grades` and any repeats in `state.repeats`.
@@ -42,12 +54,21 @@ export function attemptsOf(course, state) {
   const first = normaliseGrade(state?.grades?.[course.id]);
   if (first === NOT_ENTERED) return [];
   const rest = Array.isArray(state?.repeats?.[course.id]) ? state.repeats[course.id] : [];
+  // Once a course is passed it cannot be taken again, so the sequence stops at
+  // the first pass. Anything recorded after it is disregarded rather than
+  // counted, which also means a hand-edited file cannot manufacture an extra
+  // sitting of a course that was already passed.
+  if (!isFailingGrade(course, first)) return [first];
+
   const out = [first];
   for (const r of rest) {
     const g = normaliseGrade(r);
-    if (g !== NOT_ENTERED) out.push(g);
+    if (g === NOT_ENTERED) continue;
+    out.push(g);
+    if (out.length >= Math.max(1, course.maxAttempts ?? 1)) break;
+    if (!isFailingGrade(course, g)) break;   // passed: no further sitting
   }
-  return out.slice(0, Math.max(1, course.maxAttempts ?? 1));
+  return out;
 }
 
 /**
@@ -76,6 +97,8 @@ export function evaluateCourse(course, state) {
 
   const active = attempts.length > 0 && unitsKnown;
   const first = attempts[0] ?? null;
+  const last = attempts[attempts.length - 1] ?? null;
+  const passed = Boolean(last) && !isFailingGrade(course, last.grade);
 
   return {
     course,
@@ -88,7 +111,10 @@ export function evaluateCourse(course, state) {
     attemptCount: attempts.length,
     repeatCount: Math.max(0, attempts.length - 1),
     maxAttempts,
-    canAddAttempt: attempts.length > 0 && attempts.length < maxAttempts,
+    // Another sitting is allowed only where the last one was a failure and the
+    // year's allowance has not been used up.
+    canAddAttempt: attempts.length > 0 && attempts.length < maxAttempts && !passed,
+    passed,
 
     baseUnits: units,
     // What this course actually contributes, summed over every sitting.
@@ -226,10 +252,13 @@ export function emptyState(curriculumVersion) {
  * Setting the grade to NOT_ENTERED (null / '' / '—') removes the record
  * entirely, which returns the course to the dormant state.
  */
-export function setGrade(state, id, value) {
+export function setGrade(state, id, value, course = null) {
   const grade = normaliseGrade(value);
   const grades = { ...state.grades };
   const repeats = { ...(state.repeats ?? {}) };
+  // Correcting the first sitting to a pass removes any repeats recorded after
+  // it: a course that was passed first time was never sat again.
+  if (course && grade !== NOT_ENTERED && !isFailingGrade(course, grade)) delete repeats[id];
   if (grade === NOT_ENTERED) {
     // Clearing the first sitting clears the course: a repeat of a course that
     // was never sat is meaningless.
@@ -248,7 +277,7 @@ export function setGrade(state, id, value) {
  */
 export function setAttempt(state, course, index, value) {
   const id = typeof course === 'string' ? course : course.id;
-  if (index === 0) return setGrade(state, id, value);
+  if (index === 0) return setGrade(state, id, value, typeof course === 'string' ? null : course);
 
   const max = Math.max(1, (typeof course === 'string' ? 1 : course.maxAttempts) ?? 1);
   const grade = normaliseGrade(value);
@@ -260,6 +289,8 @@ export function setAttempt(state, course, index, value) {
     if (at < list.length) list.splice(at, 1);
   } else if (at < list.length) {
     list[at] = grade;
+    // Recording a pass closes the course: any later sitting becomes impossible.
+    if (typeof course !== 'string' && !isFailingGrade(course, grade)) list.length = at + 1;
   } else if (list.length + 1 < max) {
     list.push(grade);          // +1 for the first sitting
   } else {
@@ -277,6 +308,7 @@ export function addAttempt(state, course, value = NOT_ENTERED) {
   const taken = Array.isArray(state.repeats?.[id]) ? state.repeats[id].length : 0;
   if (!state.grades?.[id]) return state;                 // nothing sat yet
   if (taken + 1 >= Math.max(1, course.maxAttempts ?? 1)) return state;
+  if (!evaluateCourse(course, state).canAddAttempt) return state;   // already passed
   const repeats = { ...(state.repeats ?? {}) };
   repeats[id] = [...(repeats[id] ?? []), normaliseGrade(value)];
   return { ...state, repeats };

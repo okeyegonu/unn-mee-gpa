@@ -6,6 +6,22 @@
  * purely presentational.
  */
 
+/**
+ * How many sittings a course allows in total.
+ *
+ * A course first taken in year x may be repeated in each remaining year up to
+ * the programme maximum, so a course of year x allows (max - x) repeats and
+ * therefore (max - x + 1) sittings altogether.
+ *
+ * This is resolved here, while the curriculum is being flattened, so that the
+ * GPA engine can read `course.maxAttempts` without ever looking at the year.
+ */
+export function maxAttemptsForYear(year, progression) {
+  const max = progression?.maximum_years_to_graduate;
+  if (!Number.isFinite(max) || !Number.isFinite(year)) return 1;
+  return Math.max(1, max - year + 1);
+}
+
 /** Stable unique id for a course: year + semester + course code. */
 export function courseId(year, semester, code) {
   return `y${year}s${semester}-${String(code).replace(/\s+/g, '').toUpperCase()}`;
@@ -18,6 +34,7 @@ export function courseId(year, semester, code) {
 export function flattenCurriculum(doc) {
   const out = [];
   let order = 0;
+  const progression = doc.progression ?? null;
   for (const year of doc.years ?? []) {
     for (const sem of year.semesters ?? []) {
       for (const group of sem.groups ?? []) {
@@ -43,6 +60,7 @@ export function flattenCurriculum(doc) {
             legacyUnits: c.legacy_units ?? null,
             notes: c.notes ?? null,
             sourceId: sem.source_id ?? null,
+            maxAttempts: maxAttemptsForYear(year.year, progression),
             order: order++,
           });
         }

@@ -28,26 +28,78 @@ export function effectiveUnits(course, state) {
 }
 
 /**
- * Per-course computed row. `active` is true only when a valid grade is present
- * AND the unit load is known.
+ * Every sitting of a course, in order, as a list of valid grades.
+ *
+ * The first sitting lives in `state.grades` and any repeats in `state.repeats`.
+ * Splitting them this way means a result saved before repeats existed still
+ * loads, and an older copy of the interface reading the same record still finds
+ * the first sitting where it expects it.
+ *
+ * A repeat is only meaningful after a first sitting, so if the first sitting is
+ * blank the whole course is treated as not attempted.
+ */
+export function attemptsOf(course, state) {
+  const first = normaliseGrade(state?.grades?.[course.id]);
+  if (first === NOT_ENTERED) return [];
+  const rest = Array.isArray(state?.repeats?.[course.id]) ? state.repeats[course.id] : [];
+  const out = [first];
+  for (const r of rest) {
+    const g = normaliseGrade(r);
+    if (g !== NOT_ENTERED) out.push(g);
+  }
+  return out.slice(0, Math.max(1, course.maxAttempts ?? 1));
+}
+
+/**
+ * Per-course computed row.
+ *
+ * A repeated course contributes once per sitting: its units enter the
+ * denominator again and its points enter the numerator again. Repeating a
+ * 3-unit course that was failed and then passed with a B therefore contributes
+ * 6 units and 12 points, exactly as though it were two separate courses.
+ *
+ * `active` is true only when at least one valid grade is present AND the unit
+ * load is known.
  */
 export function evaluateCourse(course, state) {
-  const grade = normaliseGrade(state?.grades?.[course.id]);
+  const grades = attemptsOf(course, state);
   const units = effectiveUnits(course, state);
-  const gp = grade === NOT_ENTERED ? null : gradePoint(grade);
   const unitsKnown = Number.isFinite(units);
-  const active = grade !== NOT_ENTERED && unitsKnown;
+  const maxAttempts = Math.max(1, course.maxAttempts ?? 1);
+
+  const attempts = grades.map((g, i) => ({
+    index: i,
+    grade: g,
+    gradePoint: gradePoint(g),
+    coursePoint: unitsKnown ? units * gradePoint(g) : null,
+  }));
+
+  const active = attempts.length > 0 && unitsKnown;
+  const first = attempts[0] ?? null;
+
   return {
     course,
-    grade,
-    units,
+    // The first sitting, kept under the original names so that anything reading
+    // a single-sitting row continues to work unchanged.
+    grade: first ? first.grade : NOT_ENTERED,
+    gradePoint: first ? first.gradePoint : null,
+
+    attempts,
+    attemptCount: attempts.length,
+    repeatCount: Math.max(0, attempts.length - 1),
+    maxAttempts,
+    canAddAttempt: attempts.length > 0 && attempts.length < maxAttempts,
+
+    baseUnits: units,
+    // What this course actually contributes, summed over every sitting.
+    units: active ? units * attempts.length : units,
+    coursePoint: active ? attempts.reduce((a, x) => a + x.coursePoint, 0) : null,
+
     unitsKnown,
-    gradePoint: gp,
-    coursePoint: active ? units * gp : null,
     active,
     // A grade was entered but we do not know the unit load: the student must
     // supply it before the course can join the calculation.
-    blocked: grade !== NOT_ENTERED && !unitsKnown,
+    blocked: attempts.length > 0 && !unitsKnown,
   };
 }
 
@@ -96,6 +148,9 @@ export function formatGpa(value, dp = DEFAULT_GPA_DECIMALS) {
  */
 export function summariseRows(rows, { decimals = DEFAULT_GPA_DECIMALS } = {}) {
   let gradedCourses = 0;
+  let attempts = 0;
+  let repeats = 0;
+  let repeatedCourses = 0;
   let units = 0;
   let points = 0;
   let blocked = 0;
@@ -103,12 +158,19 @@ export function summariseRows(rows, { decimals = DEFAULT_GPA_DECIMALS } = {}) {
     if (r.blocked) blocked++;
     if (!r.active) continue;
     gradedCourses++;
+    attempts += r.attemptCount;
+    repeats += r.repeatCount;
+    if (r.repeatCount > 0) repeatedCourses++;
     units += r.units;
     points += r.coursePoint;
   }
   const gpa = units > 0 ? points / units : null;
   return {
     gradedCourses,
+    // Every sitting counts separately, so these can exceed gradedCourses.
+    attempts,
+    repeats,
+    repeatedCourses,
     units,
     points,
     gpa,
@@ -156,7 +218,7 @@ export function yearSummaries(courses, state, options) {
 
 /** An empty, valid state object. */
 export function emptyState(curriculumVersion) {
-  return { curriculumVersion: curriculumVersion ?? null, grades: {}, unitOverrides: {} };
+  return { curriculumVersion: curriculumVersion ?? null, grades: {}, repeats: {}, unitOverrides: {} };
 }
 
 /**
@@ -167,9 +229,64 @@ export function emptyState(curriculumVersion) {
 export function setGrade(state, id, value) {
   const grade = normaliseGrade(value);
   const grades = { ...state.grades };
-  if (grade === NOT_ENTERED) delete grades[id];
-  else grades[id] = grade; // same key -> overwrite, so no duplicate can arise
-  return { ...state, grades };
+  const repeats = { ...(state.repeats ?? {}) };
+  if (grade === NOT_ENTERED) {
+    // Clearing the first sitting clears the course: a repeat of a course that
+    // was never sat is meaningless.
+    delete grades[id];
+    delete repeats[id];
+  } else {
+    grades[id] = grade; // same key -> overwrite, so no duplicate can arise
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
+ * UPSERT one sitting of a course. Index 0 is the first sitting; 1 and above are
+ * repeats. Setting a repeat to NOT_ENTERED removes that sitting and closes the
+ * gap, so the remaining sittings stay contiguous.
+ */
+export function setAttempt(state, course, index, value) {
+  const id = typeof course === 'string' ? course : course.id;
+  if (index === 0) return setGrade(state, id, value);
+
+  const max = Math.max(1, (typeof course === 'string' ? 1 : course.maxAttempts) ?? 1);
+  const grade = normaliseGrade(value);
+  const repeats = { ...(state.repeats ?? {}) };
+  const list = Array.isArray(repeats[id]) ? [...repeats[id]] : [];
+  const at = index - 1;
+
+  if (grade === NOT_ENTERED) {
+    if (at < list.length) list.splice(at, 1);
+  } else if (at < list.length) {
+    list[at] = grade;
+  } else if (list.length + 1 < max) {
+    list.push(grade);          // +1 for the first sitting
+  } else {
+    return state;              // at the allowance: nothing changes
+  }
+
+  if (list.length === 0) delete repeats[id];
+  else repeats[id] = list;
+  return { ...state, repeats };
+}
+
+/** Append one more sitting, if the course's allowance has room for it. */
+export function addAttempt(state, course, value = NOT_ENTERED) {
+  const id = course.id;
+  const taken = Array.isArray(state.repeats?.[id]) ? state.repeats[id].length : 0;
+  if (!state.grades?.[id]) return state;                 // nothing sat yet
+  if (taken + 1 >= Math.max(1, course.maxAttempts ?? 1)) return state;
+  const repeats = { ...(state.repeats ?? {}) };
+  repeats[id] = [...(repeats[id] ?? []), normaliseGrade(value)];
+  return { ...state, repeats };
+}
+
+/** Drop every repeat of a course, keeping the first sitting. */
+export function clearRepeats(state, id) {
+  const repeats = { ...(state.repeats ?? {}) };
+  delete repeats[id];
+  return { ...state, repeats };
 }
 
 /** UPSERT a student-supplied unit load for a course whose units are unknown. */
@@ -183,5 +300,5 @@ export function setUnitOverride(state, id, value) {
 
 /** Remove every entered result. */
 export function clearAll(state) {
-  return { ...state, grades: {}, unitOverrides: {} };
+  return { ...state, grades: {}, repeats: {}, unitOverrides: {} };
 }

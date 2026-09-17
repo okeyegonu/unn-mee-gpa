@@ -240,7 +240,7 @@ try {
     precAfter.checked === true && precAfter.gpa === '3.50000', JSON.stringify(precAfter));
   check('the preference is stored apart from the results',
     precAfter.prefsKey === '{"fullPrecision":true}' &&
-    precAfter.resultsRecord === 'curriculum_id,curriculum_version,grades,saved_at,unitOverrides',
+    precAfter.resultsRecord === 'curriculum_id,curriculum_version,grades,repeats,saved_at,unitOverrides',
     JSON.stringify(precAfter));
 
   // Back off again for the remaining checks.

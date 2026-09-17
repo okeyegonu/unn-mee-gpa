@@ -51,6 +51,25 @@ export function defaultBackend() {
   }
 }
 
+/**
+ * Copy the repeat-sittings map defensively.
+ *
+ * Each entry is an array of the grades earned at the second and later sittings
+ * of a course. Anything that is not an array of strings is dropped rather than
+ * trusted, so a hand-edited or truncated file cannot inject odd values into the
+ * calculation. A record saved before repeats existed simply has none.
+ */
+function cloneRepeats(source) {
+  const out = {};
+  if (!source || typeof source !== 'object') return out;
+  for (const [id, list] of Object.entries(source)) {
+    if (!Array.isArray(list)) continue;
+    const clean = list.filter((g) => typeof g === 'string');
+    if (clean.length > 0) out[id] = clean;
+  }
+  return out;
+}
+
 function recordKey(curriculumId, curriculumVersion) {
   return `${curriculumId}@${curriculumVersion}`;
 }
@@ -112,6 +131,7 @@ export class ResultsRepository {
     const state = {
       curriculumVersion: this.curriculumVersion,
       grades: { ...(rec?.grades ?? {}) },
+      repeats: cloneRepeats(rec?.repeats),
       unitOverrides: { ...(rec?.unitOverrides ?? {}) },
     };
     return { state, found: Boolean(rec), savedAt: rec?.saved_at ?? null, otherVersions };
@@ -131,6 +151,7 @@ export class ResultsRepository {
       curriculum_version: this.curriculumVersion,
       saved_at: new Date().toISOString(),
       grades: { ...(state.grades ?? {}) },
+      repeats: cloneRepeats(state.repeats),
       unitOverrides: { ...(state.unitOverrides ?? {}) },
     };
     this.writeEnvelope(env);
@@ -153,6 +174,7 @@ export class ResultsRepository {
     const state = {
       curriculumVersion: this.curriculumVersion,
       grades: { ...(src.grades ?? {}) },
+      repeats: cloneRepeats(src.repeats),
       unitOverrides: { ...(src.unitOverrides ?? {}) },
     };
     await this.save(state);
@@ -168,6 +190,7 @@ export class ResultsRepository {
       curriculum_version: this.curriculumVersion,
       exported_at: new Date().toISOString(),
       grades: { ...(state.grades ?? {}) },
+      repeats: cloneRepeats(state.repeats),
       unitOverrides: { ...(state.unitOverrides ?? {}) },
       ...extra,
     };
@@ -191,6 +214,7 @@ export class ResultsRepository {
       state: {
         curriculumVersion: this.curriculumVersion,
         grades: { ...payload.grades },
+        repeats: cloneRepeats(payload.repeats),
         unitOverrides: { ...(payload.unitOverrides ?? {}) },
       },
       versionMismatch,

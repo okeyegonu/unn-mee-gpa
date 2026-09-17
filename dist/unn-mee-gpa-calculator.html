@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-17T21:21:51.823Z by tools/build-single-file.mjs.
+  Built 2026-09-17T22:19:32.836Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -182,6 +182,42 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
 .colophon { margin-top: 28px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; }
 .colophon code { font-family: var(--mono); }
 
+/* ---------- repeat sittings ---------- */
+
+.attempt-stack { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.attempt-stack:not(.multi) { gap: 0; }
+
+.attempt { position: relative; display: inline-flex; }
+
+/* Number each sitting once there is more than one, so "the second time I sat
+   this course" is unambiguous. */
+.attempt.numbered::before {
+  content: attr(data-sitting);
+  position: absolute;
+  top: -6px; left: -6px;
+  min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 999px;
+  background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+  font-family: var(--mono);
+  z-index: 1;
+}
+/* The trailing blank box is an invitation, not a result. */
+.attempt.numbered.pending::before { background: var(--ink-faint); }
+.attempt.pending select.grade { border-style: dashed; color: var(--ink-faint); }
+
+table.courses tr.repeated { background: #fdf6e8; }
+table.courses tr.repeated.active { background: #f6f2e4; }
+
+/* The units cell shows base x sittings when a course was sat more than once. */
+td.cell-units .sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+
 /* ================================================================
    Small screens — Firefox and Chrome on Android, Safari/Chrome on iOS.
 
@@ -292,6 +328,12 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
     font-size: 13px; margin-top: 4px; white-space: nowrap; text-align: left;
   }
 
+  /* a repeated course stacks its sittings vertically on a narrow screen */
+  .attempt-stack { justify-content: flex-end; gap: 8px; }
+  .attempt-stack.multi { flex-direction: column; align-items: flex-end; }
+  td.cell-grade { align-self: start; padding-top: 2px; }
+  td.cell-units .sub { display: inline; margin-left: 4px; }
+
   /* comfortable tap targets; 16px text so mobile Safari/Chrome do not zoom */
   select.grade {
     font-size: 16px; min-height: 46px; min-width: 76px; padding: 6px 8px; text-align: center;
@@ -353,6 +395,7 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
     <div class="stat">
       <span class="stat-label">Graded courses</span>
       <span class="stat-value" id="stat-courses">0</span>
+      <span class="stat-note" id="stat-attempts"></span>
     </div>
     <div class="stat">
       <span class="stat-label">Activated units</span>
@@ -382,6 +425,10 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
     <label class="check">
       <input type="checkbox" id="toggle-precision">
       <span id="toggle-precision-label">Show full precision</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="toggle-repeats">
+      <span id="toggle-repeats-label">I repeated a course</span>
     </label>
     <nav class="yearnav" id="yearnav" aria-label="Jump to year"></nav>
   </section>
@@ -420,7 +467,7 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
 </main>
 
 <script type="module">
-window.__UNN_CURRICULUM__ = {"schema_version":"1.0","curriculum_id":"unn-mee-beng-5yr","curriculum_version":"2023.1","institution":"University of Nigeria, Nsukka","faculty":"Faculty of Engineering","department":"Department of Mechanical Engineering","programme":"Mechanical Engineering","award":"B.Eng.","programme_track":"Five-Year Undergraduate Programme","grade_scale":{"A":5,"B":4,"C":3,"D":2,"E":1,"F":0},"reporting":{"gpa_decimal_places":2,"gpa_full_precision_places":5,"_comment":"gpa_decimal_places is the everyday presentation (2 is what the university reports). gpa_full_precision_places is what the 'Show full precision' switch in the interface reveals. Both are display settings only - the GPA is always computed at full precision from integer points and integer units, so more places expose digits that were already there rather than improving accuracy. The degree classification always uses the gpa_decimal_places figure, so the switch can never move a student between classes."},"sources":[{"source_id":"jpeg-first-year","document":"FIRST-YEAR-2026-09-17-18.30.34.jpeg","description":"UNN Dept. of Mechanical Engineering 'CGPA Result Pre-Computation Form', First Year block. The printed form carries the older course codes; handwritten annotations strike those out and supply the revised First Year codes and unit loads. The handwritten revision is treated as authoritative for First Year.","applies_to":["year 1"]},{"source_id":"pdf-bachelors-2023","document":"BACHELORS-PROGRAMME-14-JAN-2023-FINAL.pdf","description":"Section 2.1 'Five - Year Undergraduate Programme', sub-sections 2.1.2 to 2.1.5, printed pages 26 to the upper portion of page 30.","applies_to":["year 2","year 3","year 4","year 5"]}],"amendments":[{"date":"2026-09-17","change":"Unit loads for PHY 104 (2) and STA 112 (3) supplied by the department; the source form leaves both blank.","affects":["y1s2-PHY104","y1s2-STA112"]}],"provenance_note":"First Year is taken from the handwritten revision of the pre-computation form; Years 2-5 are taken from the 2023 bachelors programme document, which still prints the older First Year codes. The two sources therefore belong to different revisions of the same programme. Years 2-5 are reproduced exactly as printed and have not been re-coded to match the revised First Year numbering.","years":[{"year":1,"label":"First Year","semesters":[{"semester":1,"label":"First Semester","source_id":"jpeg-first-year","printed_total_units":21,"stated_total_units":16,"groups":[{"group_id":"y1s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MTH 101","title":"Elementary Mathematics I","units":2,"category":"Required Ancillary","legacy_code":"MTH 111","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"MTH 103","title":"Elementary Mathematics II","units":2,"category":"Required Ancillary","legacy_code":"MTH 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"CHM 101","title":"Basic Principles of Chemistry I","units":2,"category":"Required Ancillary","title_source":"source_document"},{"code":"CHM 107","title":"Basic Practical Chemistry","units":1,"category":"Required Ancillary","legacy_code":"CHM 171","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 101","title":"Fundamentals of Physics I","units":2,"category":"Required Ancillary","legacy_code":"PHY 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"PHY 107","title":"Practical Physics II","units":1,"category":"Required Ancillary","legacy_code":"PHY 195","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"GST 111","title":"Use of English","units":1,"category":"General Studies","legacy_code":"GSP 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"MEE 101","title":"Introduction to Engineering","units":2,"category":"Major","legacy_code":"ENGR 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 103","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."},{"code":"GET 101","title":null,"units":1,"category":"Major","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."}]}],"removed_from_earlier_revision":[{"code":"GSP 111","title":"The Use of Library and Study Skills","units":2,"notes":"Struck out on the form with no replacement."}]},{"semester":2,"label":"Second Semester","source_id":"jpeg-first-year","printed_total_units":17,"stated_total_units":16,"total_units_source":"computed_after_department_supplied_the_two_missing_unit_loads","groups":[{"group_id":"y1s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"PHY 104","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 2 units was supplied by the department."},{"code":"STA 112","title":null,"units":3,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 3 units was supplied by the department."},{"code":"CHM 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GST 114","title":null,"units":1,"category":"General Studies","title_unknown":true},{"code":"CHM 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"MTH 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GET 102","title":null,"units":2,"category":"Major","title_unknown":true}]}],"superseded_printed_list":[{"code":"MTH 122","title":"Elementary Mathematics III","units":3},{"code":"CHM 112","title":"Basic Principles of Chemistry II","units":2},{"code":"CHM 122","title":"Basic Principles of Organic Chemistry","units":2},{"code":"PHY 116","title":"General Physics for Physical Science II","units":2},{"code":"PHY 124","title":"Fundamentals of Physics III","units":3},{"code":"GSP 102","title":"Use of English II","units":2},{"code":"ENGR 102","title":"Applied Mechanics","units":3}]}]},{"year":2,"label":"Second Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"groups":[{"group_id":"y2s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 211","title":"Engineering Drawing I","units":2,"category":"Major"},{"code":"MEE 261","title":"Engineering Thermodynamics I","units":2,"category":"Major"},{"code":"EGR 201","title":"Materials Science","units":2,"category":"Required Ancillary"},{"code":"EGR 203","title":"Materials Science Laboratory","units":1,"category":"Required Ancillary"},{"code":"CVE 211","title":"Strength of Materials I","units":2,"category":"Required Ancillary"},{"code":"CVE 213","title":"Strength of Materials Laboratory I","units":1,"category":"Required Ancillary"},{"code":"EEE 211","title":"Basic Electrical Engineering","units":3,"category":"Required Ancillary"},{"code":"MTH 207","title":"Advanced Mathematics VII","units":2,"category":"Required Ancillary"},{"code":"GSP 201","title":"The Social Sciences","units":2,"category":"General Studies"},{"code":"GSP 207","title":"Logic, Philosophy and Human Existence","units":2,"category":"General Studies"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"groups":[{"group_id":"y2s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 202","title":"Computing and Programming for Mechanical Engineers","units":3,"category":"Major"},{"code":"MEE 204","title":"Computing and Programming Laboratory","units":1,"category":"Major"},{"code":"MEE 212","title":"Workshop Technology","units":2,"category":"Major"},{"code":"CVE 222","title":"Fluid Mechanics I","units":2,"category":"Required Ancillary"},{"code":"CVE 224","title":"Fluid Mechanics Laboratory","units":1,"category":"Required Ancillary"},{"code":"EEE 252","title":"Basic Electrical Engineering Lab/Practice","units":1,"category":"Required Ancillary"},{"code":"MTH 206","title":"Advanced Mathematics VI","units":2,"category":"Required Ancillary"},{"code":"MTH 208","title":"Advanced Mathematics VIII","units":2,"category":"Required Ancillary"},{"code":"GSP 202","title":"Issues in Peace and Conflict Resolution Studies","units":2,"category":"General Studies"},{"code":"GSP 208","title":"Nigerian Peoples and Culture","units":2,"category":"General Studies"}]}]}]},{"year":3,"label":"Third Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 311","title":"Manufacturing Processes","units":2,"category":"Major"},{"code":"MEE 313","title":"Mechanical Engineering Design I","units":3,"category":"Major"},{"code":"MEE 315","title":"Workshop Practice","units":1,"category":"Major"},{"code":"MEE 321","title":"Thermo-Fluids Laboratory I","units":1,"category":"Major"},{"code":"MEE 323","title":"Mechanics of Machines Laboratory I","units":1,"category":"Major"},{"code":"MEE 341","title":"Mechanics of Machines I","units":2,"category":"Major"},{"code":"MEE 343","title":"Measurement and Instrumentation","units":2,"category":"Major"},{"code":"MEE 351","title":"Mechanics of Fluids","units":2,"category":"Major"},{"code":"MEE 361","title":"Engineering Thermodynamics II","units":2,"category":"Major"},{"code":"CED 341","title":"Introduction to Entrepreneurship I","units":2,"category":"Required Ancillary"},{"code":"STA 205","title":"Statistics for Physical Sciences and Engineering I","units":2,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 312","title":"Computer-Aided Design and Manufacture","units":2,"category":"Major"},{"code":"MEE 314","title":"Engineering Drawing II","units":2,"category":"Major"},{"code":"MEE 322","title":"Mechanics of Materials Laboratory","units":1,"category":"Major"},{"code":"MEE 324","title":"CAD/CAM Laboratory","units":1,"category":"Major"},{"code":"MEE 332","title":"Mechanics of Materials I","units":3,"category":"Major"},{"code":"MEE 372","title":"Heat and Mass Transfer I","units":2,"category":"Major"},{"code":"CED 342","title":"Introduction to Entrepreneurship II","units":2,"category":"Required Ancillary"},{"code":"EEE 312","title":"Electrical Engineering II","units":3,"category":"Required Ancillary"},{"code":"EGR 302","title":"Engineering Analysis","units":4,"category":"Required Ancillary"}]}]}]},{"year":4,"label":"Fourth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":22,"stated_total_units":22,"groups":[{"group_id":"y4s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 413","title":"Mechanical Engineering Design II","units":3,"category":"Major"},{"code":"MEE 421","title":"Thermo-Fluids Laboratory II","units":1,"category":"Major"},{"code":"MEE 423","title":"Mechanics of Machines Laboratory II","units":1,"category":"Major"},{"code":"MEE 425","title":"Heat and Mass Transfer Laboratory","units":1,"category":"Major"},{"code":"MEE 441","title":"Mechanics of Machines II","units":2,"category":"Major"},{"code":"MEE 443","title":"Automatic Control","units":3,"category":"Major"},{"code":"MEE 451","title":"Applied Fluid Mechanics","units":2,"category":"Major"},{"code":"MEE 461","title":"Engineering Thermodynamics III","units":2,"category":"Major"},{"code":"MEE 471","title":"Heat and Mass Transfer II","units":2,"category":"Major"},{"code":"MEE 481","title":"Technology Development Policy","units":2,"category":"Major"},{"code":"EGR 401","title":"Computational Methods","units":3,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":15,"stated_total_units":15,"groups":[{"group_id":"y4s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 402","title":"Written Technical Communication","units":2,"category":"Major"},{"code":"MEE 404","title":"Seminar Presentation Skills","units":1,"category":"Major"},{"code":"MEE 412","title":"Computer Aided Design Practice","units":2,"category":"Major"},{"code":"EGR 402","title":"SIWES","units":10,"category":"Required Ancillary"}]}]}]},{"year":5,"label":"Fifth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"elective_rule":"Two (2) elective courses (6 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 511","title":"Applied Design","units":3,"category":"Major"},{"code":"MEE 531","title":"Mechanics of Materials II","units":3,"category":"Major"},{"code":"MEE 551","title":"Fluid Dynamics","units":3,"category":"Major"},{"code":"MEE 561","title":"Engineering Thermodynamics IV","units":3,"category":"Major"}]},{"group_id":"y5s1-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 555","title":"Aerospace Engineering Fundamentals","units":3,"category":"Elective"},{"code":"MEE 557","title":"Fluid Power Transmission Systems","units":3,"category":"Elective"},{"code":"MEE 563","title":"Automotive Engine Fundamentals","units":3,"category":"Elective"},{"code":"MEE 565","title":"Fundamentals of Nuclear Engineering","units":3,"category":"Elective"},{"code":"MEE 569","title":"Direct Energy Conversion Principles","units":3,"category":"Elective"},{"code":"MEE 572","title":"Thermal Engineering and Advanced Heat Transfer","units":3,"category":"Elective"}]},{"group_id":"y5s1-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 513","title":"Manufacturing and Tools Engineering","units":3,"category":"Elective"},{"code":"MEE 515","title":"Design of Welded and Cast Structures","units":3,"category":"Elective"},{"code":"MEE 533","title":"Engineering Metallurgy","units":3,"category":"Elective"},{"code":"MEE 541","title":"Systems Engineering","units":3,"category":"Elective"},{"code":"MEE 543","title":"Vibrations and Control","units":3,"category":"Elective"},{"code":"MEE 545","title":"Mechatronics","units":3,"category":"Elective"},{"code":"MEE 547","title":"Automobile Engineering","units":3,"category":"Elective"},{"code":"MEE 581","title":"Quality Assurance and Reliability","units":3,"category":"Elective"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"elective_rule":"One (1) elective course (3 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 534","title":"Materials for Engineering Applications","units":3,"category":"Major"},{"code":"MEE 582","title":"Engineering Law","units":2,"category":"Major"},{"code":"MEE 584","title":"Engineering Management","units":2,"category":"Major"},{"code":"MEE 586","title":"Engineering Economy","units":3,"category":"Major"},{"code":"MEE 592","title":"B.Eng. Project","units":6,"category":"Major"}]},{"group_id":"y5s2-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 552","title":"Computational Fluid Dynamics","units":3,"category":"Elective"},{"code":"MEE 562","title":"Refrigeration and Air-Conditioning","units":3,"category":"Elective"},{"code":"MEE 568","title":"Power Plant Engineering","units":3,"category":"Elective"}]},{"group_id":"y5s2-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 512","title":"Design of Pressure Vessels","units":3,"category":"Elective"},{"code":"MEE 532","title":"Theory of Elasticity","units":3,"category":"Elective"},{"code":"MEE 536","title":"Introduction to Composite Materials","units":3,"category":"Elective"}]}]}]}]};
+window.__UNN_CURRICULUM__ = {"schema_version":"1.0","curriculum_id":"unn-mee-beng-5yr","curriculum_version":"2023.1","institution":"University of Nigeria, Nsukka","faculty":"Faculty of Engineering","department":"Department of Mechanical Engineering","programme":"Mechanical Engineering","award":"B.Eng.","programme_track":"Five-Year Undergraduate Programme","grade_scale":{"A":5,"B":4,"C":3,"D":2,"E":1,"F":0},"progression":{"minimum_years_to_graduate":5,"maximum_years_to_graduate":8,"repeat_attempts_rule":"maximum_years_to_graduate - course_year","_comment":"A course first taken in year x may be repeated in each remaining year up to the maximum of 8, giving (8 - x) repeat attempts and (9 - x) sittings in total: 8 for a First Year course, 4 for a Fifth Year course. Every sitting counts separately in the GPA - its units enter the denominator again and its points enter the numerator again - so repeating a course degrades the GPA in the same way that taking an extra course would. Change maximum_years_to_graduate to move the allowance for every year at once."},"reporting":{"gpa_decimal_places":2,"gpa_full_precision_places":5,"_comment":"gpa_decimal_places is the everyday presentation (2 is what the university reports). gpa_full_precision_places is what the 'Show full precision' switch in the interface reveals. Both are display settings only - the GPA is always computed at full precision from integer points and integer units, so more places expose digits that were already there rather than improving accuracy. The degree classification always uses the gpa_decimal_places figure, so the switch can never move a student between classes."},"sources":[{"source_id":"jpeg-first-year","document":"FIRST-YEAR-2026-09-17-18.30.34.jpeg","description":"UNN Dept. of Mechanical Engineering 'CGPA Result Pre-Computation Form', First Year block. The printed form carries the older course codes; handwritten annotations strike those out and supply the revised First Year codes and unit loads. The handwritten revision is treated as authoritative for First Year.","applies_to":["year 1"]},{"source_id":"pdf-bachelors-2023","document":"BACHELORS-PROGRAMME-14-JAN-2023-FINAL.pdf","description":"Section 2.1 'Five - Year Undergraduate Programme', sub-sections 2.1.2 to 2.1.5, printed pages 26 to the upper portion of page 30.","applies_to":["year 2","year 3","year 4","year 5"]}],"amendments":[{"date":"2026-09-17","change":"Unit loads for PHY 104 (2) and STA 112 (3) supplied by the department; the source form leaves both blank.","affects":["y1s2-PHY104","y1s2-STA112"]}],"provenance_note":"First Year is taken from the handwritten revision of the pre-computation form; Years 2-5 are taken from the 2023 bachelors programme document, which still prints the older First Year codes. The two sources therefore belong to different revisions of the same programme. Years 2-5 are reproduced exactly as printed and have not been re-coded to match the revised First Year numbering.","years":[{"year":1,"label":"First Year","semesters":[{"semester":1,"label":"First Semester","source_id":"jpeg-first-year","printed_total_units":21,"stated_total_units":16,"groups":[{"group_id":"y1s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MTH 101","title":"Elementary Mathematics I","units":2,"category":"Required Ancillary","legacy_code":"MTH 111","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"MTH 103","title":"Elementary Mathematics II","units":2,"category":"Required Ancillary","legacy_code":"MTH 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"CHM 101","title":"Basic Principles of Chemistry I","units":2,"category":"Required Ancillary","title_source":"source_document"},{"code":"CHM 107","title":"Basic Practical Chemistry","units":1,"category":"Required Ancillary","legacy_code":"CHM 171","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 101","title":"Fundamentals of Physics I","units":2,"category":"Required Ancillary","legacy_code":"PHY 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"PHY 107","title":"Practical Physics II","units":1,"category":"Required Ancillary","legacy_code":"PHY 195","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"GST 111","title":"Use of English","units":1,"category":"General Studies","legacy_code":"GSP 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"MEE 101","title":"Introduction to Engineering","units":2,"category":"Major","legacy_code":"ENGR 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 103","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."},{"code":"GET 101","title":null,"units":1,"category":"Major","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."}]}],"removed_from_earlier_revision":[{"code":"GSP 111","title":"The Use of Library and Study Skills","units":2,"notes":"Struck out on the form with no replacement."}]},{"semester":2,"label":"Second Semester","source_id":"jpeg-first-year","printed_total_units":17,"stated_total_units":16,"total_units_source":"computed_after_department_supplied_the_two_missing_unit_loads","groups":[{"group_id":"y1s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"PHY 104","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 2 units was supplied by the department."},{"code":"STA 112","title":null,"units":3,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 3 units was supplied by the department."},{"code":"CHM 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GST 114","title":null,"units":1,"category":"General Studies","title_unknown":true},{"code":"CHM 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"MTH 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GET 102","title":null,"units":2,"category":"Major","title_unknown":true}]}],"superseded_printed_list":[{"code":"MTH 122","title":"Elementary Mathematics III","units":3},{"code":"CHM 112","title":"Basic Principles of Chemistry II","units":2},{"code":"CHM 122","title":"Basic Principles of Organic Chemistry","units":2},{"code":"PHY 116","title":"General Physics for Physical Science II","units":2},{"code":"PHY 124","title":"Fundamentals of Physics III","units":3},{"code":"GSP 102","title":"Use of English II","units":2},{"code":"ENGR 102","title":"Applied Mechanics","units":3}]}]},{"year":2,"label":"Second Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"groups":[{"group_id":"y2s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 211","title":"Engineering Drawing I","units":2,"category":"Major"},{"code":"MEE 261","title":"Engineering Thermodynamics I","units":2,"category":"Major"},{"code":"EGR 201","title":"Materials Science","units":2,"category":"Required Ancillary"},{"code":"EGR 203","title":"Materials Science Laboratory","units":1,"category":"Required Ancillary"},{"code":"CVE 211","title":"Strength of Materials I","units":2,"category":"Required Ancillary"},{"code":"CVE 213","title":"Strength of Materials Laboratory I","units":1,"category":"Required Ancillary"},{"code":"EEE 211","title":"Basic Electrical Engineering","units":3,"category":"Required Ancillary"},{"code":"MTH 207","title":"Advanced Mathematics VII","units":2,"category":"Required Ancillary"},{"code":"GSP 201","title":"The Social Sciences","units":2,"category":"General Studies"},{"code":"GSP 207","title":"Logic, Philosophy and Human Existence","units":2,"category":"General Studies"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"groups":[{"group_id":"y2s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 202","title":"Computing and Programming for Mechanical Engineers","units":3,"category":"Major"},{"code":"MEE 204","title":"Computing and Programming Laboratory","units":1,"category":"Major"},{"code":"MEE 212","title":"Workshop Technology","units":2,"category":"Major"},{"code":"CVE 222","title":"Fluid Mechanics I","units":2,"category":"Required Ancillary"},{"code":"CVE 224","title":"Fluid Mechanics Laboratory","units":1,"category":"Required Ancillary"},{"code":"EEE 252","title":"Basic Electrical Engineering Lab/Practice","units":1,"category":"Required Ancillary"},{"code":"MTH 206","title":"Advanced Mathematics VI","units":2,"category":"Required Ancillary"},{"code":"MTH 208","title":"Advanced Mathematics VIII","units":2,"category":"Required Ancillary"},{"code":"GSP 202","title":"Issues in Peace and Conflict Resolution Studies","units":2,"category":"General Studies"},{"code":"GSP 208","title":"Nigerian Peoples and Culture","units":2,"category":"General Studies"}]}]}]},{"year":3,"label":"Third Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 311","title":"Manufacturing Processes","units":2,"category":"Major"},{"code":"MEE 313","title":"Mechanical Engineering Design I","units":3,"category":"Major"},{"code":"MEE 315","title":"Workshop Practice","units":1,"category":"Major"},{"code":"MEE 321","title":"Thermo-Fluids Laboratory I","units":1,"category":"Major"},{"code":"MEE 323","title":"Mechanics of Machines Laboratory I","units":1,"category":"Major"},{"code":"MEE 341","title":"Mechanics of Machines I","units":2,"category":"Major"},{"code":"MEE 343","title":"Measurement and Instrumentation","units":2,"category":"Major"},{"code":"MEE 351","title":"Mechanics of Fluids","units":2,"category":"Major"},{"code":"MEE 361","title":"Engineering Thermodynamics II","units":2,"category":"Major"},{"code":"CED 341","title":"Introduction to Entrepreneurship I","units":2,"category":"Required Ancillary"},{"code":"STA 205","title":"Statistics for Physical Sciences and Engineering I","units":2,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 312","title":"Computer-Aided Design and Manufacture","units":2,"category":"Major"},{"code":"MEE 314","title":"Engineering Drawing II","units":2,"category":"Major"},{"code":"MEE 322","title":"Mechanics of Materials Laboratory","units":1,"category":"Major"},{"code":"MEE 324","title":"CAD/CAM Laboratory","units":1,"category":"Major"},{"code":"MEE 332","title":"Mechanics of Materials I","units":3,"category":"Major"},{"code":"MEE 372","title":"Heat and Mass Transfer I","units":2,"category":"Major"},{"code":"CED 342","title":"Introduction to Entrepreneurship II","units":2,"category":"Required Ancillary"},{"code":"EEE 312","title":"Electrical Engineering II","units":3,"category":"Required Ancillary"},{"code":"EGR 302","title":"Engineering Analysis","units":4,"category":"Required Ancillary"}]}]}]},{"year":4,"label":"Fourth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":22,"stated_total_units":22,"groups":[{"group_id":"y4s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 413","title":"Mechanical Engineering Design II","units":3,"category":"Major"},{"code":"MEE 421","title":"Thermo-Fluids Laboratory II","units":1,"category":"Major"},{"code":"MEE 423","title":"Mechanics of Machines Laboratory II","units":1,"category":"Major"},{"code":"MEE 425","title":"Heat and Mass Transfer Laboratory","units":1,"category":"Major"},{"code":"MEE 441","title":"Mechanics of Machines II","units":2,"category":"Major"},{"code":"MEE 443","title":"Automatic Control","units":3,"category":"Major"},{"code":"MEE 451","title":"Applied Fluid Mechanics","units":2,"category":"Major"},{"code":"MEE 461","title":"Engineering Thermodynamics III","units":2,"category":"Major"},{"code":"MEE 471","title":"Heat and Mass Transfer II","units":2,"category":"Major"},{"code":"MEE 481","title":"Technology Development Policy","units":2,"category":"Major"},{"code":"EGR 401","title":"Computational Methods","units":3,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":15,"stated_total_units":15,"groups":[{"group_id":"y4s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 402","title":"Written Technical Communication","units":2,"category":"Major"},{"code":"MEE 404","title":"Seminar Presentation Skills","units":1,"category":"Major"},{"code":"MEE 412","title":"Computer Aided Design Practice","units":2,"category":"Major"},{"code":"EGR 402","title":"SIWES","units":10,"category":"Required Ancillary"}]}]}]},{"year":5,"label":"Fifth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"elective_rule":"Two (2) elective courses (6 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 511","title":"Applied Design","units":3,"category":"Major"},{"code":"MEE 531","title":"Mechanics of Materials II","units":3,"category":"Major"},{"code":"MEE 551","title":"Fluid Dynamics","units":3,"category":"Major"},{"code":"MEE 561","title":"Engineering Thermodynamics IV","units":3,"category":"Major"}]},{"group_id":"y5s1-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 555","title":"Aerospace Engineering Fundamentals","units":3,"category":"Elective"},{"code":"MEE 557","title":"Fluid Power Transmission Systems","units":3,"category":"Elective"},{"code":"MEE 563","title":"Automotive Engine Fundamentals","units":3,"category":"Elective"},{"code":"MEE 565","title":"Fundamentals of Nuclear Engineering","units":3,"category":"Elective"},{"code":"MEE 569","title":"Direct Energy Conversion Principles","units":3,"category":"Elective"},{"code":"MEE 572","title":"Thermal Engineering and Advanced Heat Transfer","units":3,"category":"Elective"}]},{"group_id":"y5s1-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 513","title":"Manufacturing and Tools Engineering","units":3,"category":"Elective"},{"code":"MEE 515","title":"Design of Welded and Cast Structures","units":3,"category":"Elective"},{"code":"MEE 533","title":"Engineering Metallurgy","units":3,"category":"Elective"},{"code":"MEE 541","title":"Systems Engineering","units":3,"category":"Elective"},{"code":"MEE 543","title":"Vibrations and Control","units":3,"category":"Elective"},{"code":"MEE 545","title":"Mechatronics","units":3,"category":"Elective"},{"code":"MEE 547","title":"Automobile Engineering","units":3,"category":"Elective"},{"code":"MEE 581","title":"Quality Assurance and Reliability","units":3,"category":"Elective"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"elective_rule":"One (1) elective course (3 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 534","title":"Materials for Engineering Applications","units":3,"category":"Major"},{"code":"MEE 582","title":"Engineering Law","units":2,"category":"Major"},{"code":"MEE 584","title":"Engineering Management","units":2,"category":"Major"},{"code":"MEE 586","title":"Engineering Economy","units":3,"category":"Major"},{"code":"MEE 592","title":"B.Eng. Project","units":6,"category":"Major"}]},{"group_id":"y5s2-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 552","title":"Computational Fluid Dynamics","units":3,"category":"Elective"},{"code":"MEE 562","title":"Refrigeration and Air-Conditioning","units":3,"category":"Elective"},{"code":"MEE 568","title":"Power Plant Engineering","units":3,"category":"Elective"}]},{"group_id":"y5s2-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 512","title":"Design of Pressure Vessels","units":3,"category":"Elective"},{"code":"MEE 532","title":"Theory of Elasticity","units":3,"category":"Elective"},{"code":"MEE 536","title":"Introduction to Composite Materials","units":3,"category":"Elective"}]}]}]}]};
 
 /* ======== src/grading.js ======== */
 /**
@@ -530,6 +577,22 @@ function classOfDegree(gpa) {
  * purely presentational.
  */
 
+/**
+ * How many sittings a course allows in total.
+ *
+ * A course first taken in year x may be repeated in each remaining year up to
+ * the programme maximum, so a course of year x allows (max - x) repeats and
+ * therefore (max - x + 1) sittings altogether.
+ *
+ * This is resolved here, while the curriculum is being flattened, so that the
+ * GPA engine can read `course.maxAttempts` without ever looking at the year.
+ */
+function maxAttemptsForYear(year, progression) {
+  const max = progression?.maximum_years_to_graduate;
+  if (!Number.isFinite(max) || !Number.isFinite(year)) return 1;
+  return Math.max(1, max - year + 1);
+}
+
 /** Stable unique id for a course: year + semester + course code. */
 function courseId(year, semester, code) {
   return `y${year}s${semester}-${String(code).replace(/\s+/g, '').toUpperCase()}`;
@@ -542,6 +605,7 @@ function courseId(year, semester, code) {
 function flattenCurriculum(doc) {
   const out = [];
   let order = 0;
+  const progression = doc.progression ?? null;
   for (const year of doc.years ?? []) {
     for (const sem of year.semesters ?? []) {
       for (const group of sem.groups ?? []) {
@@ -567,6 +631,7 @@ function flattenCurriculum(doc) {
             legacyUnits: c.legacy_units ?? null,
             notes: c.notes ?? null,
             sourceId: sem.source_id ?? null,
+            maxAttempts: maxAttemptsForYear(year.year, progression),
             order: order++,
           });
         }
@@ -732,26 +797,78 @@ function effectiveUnits(course, state) {
 }
 
 /**
- * Per-course computed row. `active` is true only when a valid grade is present
- * AND the unit load is known.
+ * Every sitting of a course, in order, as a list of valid grades.
+ *
+ * The first sitting lives in `state.grades` and any repeats in `state.repeats`.
+ * Splitting them this way means a result saved before repeats existed still
+ * loads, and an older copy of the interface reading the same record still finds
+ * the first sitting where it expects it.
+ *
+ * A repeat is only meaningful after a first sitting, so if the first sitting is
+ * blank the whole course is treated as not attempted.
+ */
+function attemptsOf(course, state) {
+  const first = normaliseGrade(state?.grades?.[course.id]);
+  if (first === NOT_ENTERED) return [];
+  const rest = Array.isArray(state?.repeats?.[course.id]) ? state.repeats[course.id] : [];
+  const out = [first];
+  for (const r of rest) {
+    const g = normaliseGrade(r);
+    if (g !== NOT_ENTERED) out.push(g);
+  }
+  return out.slice(0, Math.max(1, course.maxAttempts ?? 1));
+}
+
+/**
+ * Per-course computed row.
+ *
+ * A repeated course contributes once per sitting: its units enter the
+ * denominator again and its points enter the numerator again. Repeating a
+ * 3-unit course that was failed and then passed with a B therefore contributes
+ * 6 units and 12 points, exactly as though it were two separate courses.
+ *
+ * `active` is true only when at least one valid grade is present AND the unit
+ * load is known.
  */
 function evaluateCourse(course, state) {
-  const grade = normaliseGrade(state?.grades?.[course.id]);
+  const grades = attemptsOf(course, state);
   const units = effectiveUnits(course, state);
-  const gp = grade === NOT_ENTERED ? null : gradePoint(grade);
   const unitsKnown = Number.isFinite(units);
-  const active = grade !== NOT_ENTERED && unitsKnown;
+  const maxAttempts = Math.max(1, course.maxAttempts ?? 1);
+
+  const attempts = grades.map((g, i) => ({
+    index: i,
+    grade: g,
+    gradePoint: gradePoint(g),
+    coursePoint: unitsKnown ? units * gradePoint(g) : null,
+  }));
+
+  const active = attempts.length > 0 && unitsKnown;
+  const first = attempts[0] ?? null;
+
   return {
     course,
-    grade,
-    units,
+    // The first sitting, kept under the original names so that anything reading
+    // a single-sitting row continues to work unchanged.
+    grade: first ? first.grade : NOT_ENTERED,
+    gradePoint: first ? first.gradePoint : null,
+
+    attempts,
+    attemptCount: attempts.length,
+    repeatCount: Math.max(0, attempts.length - 1),
+    maxAttempts,
+    canAddAttempt: attempts.length > 0 && attempts.length < maxAttempts,
+
+    baseUnits: units,
+    // What this course actually contributes, summed over every sitting.
+    units: active ? units * attempts.length : units,
+    coursePoint: active ? attempts.reduce((a, x) => a + x.coursePoint, 0) : null,
+
     unitsKnown,
-    gradePoint: gp,
-    coursePoint: active ? units * gp : null,
     active,
     // A grade was entered but we do not know the unit load: the student must
     // supply it before the course can join the calculation.
-    blocked: grade !== NOT_ENTERED && !unitsKnown,
+    blocked: attempts.length > 0 && !unitsKnown,
   };
 }
 
@@ -800,6 +917,9 @@ function formatGpa(value, dp = DEFAULT_GPA_DECIMALS) {
  */
 function summariseRows(rows, { decimals = DEFAULT_GPA_DECIMALS } = {}) {
   let gradedCourses = 0;
+  let attempts = 0;
+  let repeats = 0;
+  let repeatedCourses = 0;
   let units = 0;
   let points = 0;
   let blocked = 0;
@@ -807,12 +927,19 @@ function summariseRows(rows, { decimals = DEFAULT_GPA_DECIMALS } = {}) {
     if (r.blocked) blocked++;
     if (!r.active) continue;
     gradedCourses++;
+    attempts += r.attemptCount;
+    repeats += r.repeatCount;
+    if (r.repeatCount > 0) repeatedCourses++;
     units += r.units;
     points += r.coursePoint;
   }
   const gpa = units > 0 ? points / units : null;
   return {
     gradedCourses,
+    // Every sitting counts separately, so these can exceed gradedCourses.
+    attempts,
+    repeats,
+    repeatedCourses,
     units,
     points,
     gpa,
@@ -860,7 +987,7 @@ function yearSummaries(courses, state, options) {
 
 /** An empty, valid state object. */
 function emptyState(curriculumVersion) {
-  return { curriculumVersion: curriculumVersion ?? null, grades: {}, unitOverrides: {} };
+  return { curriculumVersion: curriculumVersion ?? null, grades: {}, repeats: {}, unitOverrides: {} };
 }
 
 /**
@@ -871,9 +998,64 @@ function emptyState(curriculumVersion) {
 function setGrade(state, id, value) {
   const grade = normaliseGrade(value);
   const grades = { ...state.grades };
-  if (grade === NOT_ENTERED) delete grades[id];
-  else grades[id] = grade; // same key -> overwrite, so no duplicate can arise
-  return { ...state, grades };
+  const repeats = { ...(state.repeats ?? {}) };
+  if (grade === NOT_ENTERED) {
+    // Clearing the first sitting clears the course: a repeat of a course that
+    // was never sat is meaningless.
+    delete grades[id];
+    delete repeats[id];
+  } else {
+    grades[id] = grade; // same key -> overwrite, so no duplicate can arise
+  }
+  return { ...state, grades, repeats };
+}
+
+/**
+ * UPSERT one sitting of a course. Index 0 is the first sitting; 1 and above are
+ * repeats. Setting a repeat to NOT_ENTERED removes that sitting and closes the
+ * gap, so the remaining sittings stay contiguous.
+ */
+function setAttempt(state, course, index, value) {
+  const id = typeof course === 'string' ? course : course.id;
+  if (index === 0) return setGrade(state, id, value);
+
+  const max = Math.max(1, (typeof course === 'string' ? 1 : course.maxAttempts) ?? 1);
+  const grade = normaliseGrade(value);
+  const repeats = { ...(state.repeats ?? {}) };
+  const list = Array.isArray(repeats[id]) ? [...repeats[id]] : [];
+  const at = index - 1;
+
+  if (grade === NOT_ENTERED) {
+    if (at < list.length) list.splice(at, 1);
+  } else if (at < list.length) {
+    list[at] = grade;
+  } else if (list.length + 1 < max) {
+    list.push(grade);          // +1 for the first sitting
+  } else {
+    return state;              // at the allowance: nothing changes
+  }
+
+  if (list.length === 0) delete repeats[id];
+  else repeats[id] = list;
+  return { ...state, repeats };
+}
+
+/** Append one more sitting, if the course's allowance has room for it. */
+function addAttempt(state, course, value = NOT_ENTERED) {
+  const id = course.id;
+  const taken = Array.isArray(state.repeats?.[id]) ? state.repeats[id].length : 0;
+  if (!state.grades?.[id]) return state;                 // nothing sat yet
+  if (taken + 1 >= Math.max(1, course.maxAttempts ?? 1)) return state;
+  const repeats = { ...(state.repeats ?? {}) };
+  repeats[id] = [...(repeats[id] ?? []), normaliseGrade(value)];
+  return { ...state, repeats };
+}
+
+/** Drop every repeat of a course, keeping the first sitting. */
+function clearRepeats(state, id) {
+  const repeats = { ...(state.repeats ?? {}) };
+  delete repeats[id];
+  return { ...state, repeats };
 }
 
 /** UPSERT a student-supplied unit load for a course whose units are unknown. */
@@ -887,7 +1069,7 @@ function setUnitOverride(state, id, value) {
 
 /** Remove every entered result. */
 function clearAll(state) {
-  return { ...state, grades: {}, unitOverrides: {} };
+  return { ...state, grades: {}, repeats: {}, unitOverrides: {} };
 }
 
 /* ======== src/storage.js ======== */
@@ -942,6 +1124,25 @@ function defaultBackend() {
   } catch {
     return new MemoryBackend();
   }
+}
+
+/**
+ * Copy the repeat-sittings map defensively.
+ *
+ * Each entry is an array of the grades earned at the second and later sittings
+ * of a course. Anything that is not an array of strings is dropped rather than
+ * trusted, so a hand-edited or truncated file cannot inject odd values into the
+ * calculation. A record saved before repeats existed simply has none.
+ */
+function cloneRepeats(source) {
+  const out = {};
+  if (!source || typeof source !== 'object') return out;
+  for (const [id, list] of Object.entries(source)) {
+    if (!Array.isArray(list)) continue;
+    const clean = list.filter((g) => typeof g === 'string');
+    if (clean.length > 0) out[id] = clean;
+  }
+  return out;
 }
 
 function recordKey(curriculumId, curriculumVersion) {
@@ -1005,6 +1206,7 @@ class ResultsRepository {
     const state = {
       curriculumVersion: this.curriculumVersion,
       grades: { ...(rec?.grades ?? {}) },
+      repeats: cloneRepeats(rec?.repeats),
       unitOverrides: { ...(rec?.unitOverrides ?? {}) },
     };
     return { state, found: Boolean(rec), savedAt: rec?.saved_at ?? null, otherVersions };
@@ -1024,6 +1226,7 @@ class ResultsRepository {
       curriculum_version: this.curriculumVersion,
       saved_at: new Date().toISOString(),
       grades: { ...(state.grades ?? {}) },
+      repeats: cloneRepeats(state.repeats),
       unitOverrides: { ...(state.unitOverrides ?? {}) },
     };
     this.writeEnvelope(env);
@@ -1046,6 +1249,7 @@ class ResultsRepository {
     const state = {
       curriculumVersion: this.curriculumVersion,
       grades: { ...(src.grades ?? {}) },
+      repeats: cloneRepeats(src.repeats),
       unitOverrides: { ...(src.unitOverrides ?? {}) },
     };
     await this.save(state);
@@ -1061,6 +1265,7 @@ class ResultsRepository {
       curriculum_version: this.curriculumVersion,
       exported_at: new Date().toISOString(),
       grades: { ...(state.grades ?? {}) },
+      repeats: cloneRepeats(state.repeats),
       unitOverrides: { ...(state.unitOverrides ?? {}) },
       ...extra,
     };
@@ -1084,6 +1289,7 @@ class ResultsRepository {
       state: {
         curriculumVersion: this.curriculumVersion,
         grades: { ...payload.grades },
+        repeats: cloneRepeats(payload.repeats),
         unitOverrides: { ...(payload.unitOverrides ?? {}) },
       },
       versionMismatch,
@@ -1166,6 +1372,9 @@ const els = {
   filterEntered: $('#filter-entered'),
   togglePrecision: $('#toggle-precision'),
   togglePrecisionLabel: $('#toggle-precision-label'),
+  toggleRepeats: $('#toggle-repeats'),
+  toggleRepeatsLabel: $('#toggle-repeats-label'),
+  attemptsNote: $('#stat-attempts'),
   gpa: $('#stat-gpa'),
   klass: $('#stat-class'),
   courses: $('#stat-courses'),
@@ -1358,14 +1567,9 @@ function buildRow(year, sem, rawCourse) {
 
   const tdGrade = document.createElement('td');
   tdGrade.className = 'cell-grade';
-  const select = document.createElement('select');
-  select.className = 'grade';
-  select.setAttribute('aria-label', `Grade for ${course.code}`);
-  select.append(new Option('—', ''));
-  for (const g of GRADES) select.append(new Option(g, g));
-  select.value = state.grades[course.id] ?? '';
-  select.addEventListener('change', () => onGradeChange(course.id, select.value));
-  tdGrade.append(select);
+  const stack = document.createElement('div');
+  stack.className = 'attempt-stack';
+  tdGrade.append(stack);
 
   const tdGp = document.createElement('td');
   tdGp.className = 'num cell-gp';
@@ -1375,14 +1579,39 @@ function buildRow(year, sem, rawCourse) {
   tdPt.dataset.label = 'Course pt';
 
   tr.append(tdCode, tdTitle, tdUnits, tdGrade, tdGp, tdPt);
-  rowRefs.set(course.id, { tr, select, tdUnits, tdGp, tdPt, course });
+  rowRefs.set(course.id, { tr, stack, selects: [], tdUnits, tdGp, tdPt, course });
   return tr;
+}
+
+/**
+ * Make the row show exactly `count` grade controls, reusing the ones already
+ * there. Reusing rather than rebuilding is what keeps the control the student
+ * just changed from losing focus when the row re-renders.
+ */
+function syncSelects(ref, count) {
+  while (ref.selects.length < count) {
+    const index = ref.selects.length;
+    const sel = document.createElement('select');
+    sel.className = 'grade';
+    sel.append(new Option('—', ''));
+    for (const g of GRADES) sel.append(new Option(g, g));
+    sel.addEventListener('change', () => onAttemptChange(ref.course, index, sel.value));
+    const wrap = document.createElement('span');
+    wrap.className = 'attempt';
+    wrap.dataset.sitting = String(index + 1);
+    wrap.append(sel);
+    ref.stack.append(wrap);
+    ref.selects.push(sel);
+  }
+  while (ref.selects.length > count) {
+    ref.selects.pop().closest('.attempt').remove();
+  }
 }
 
 /* ---------------------------------------------------------------- events */
 
-async function onGradeChange(id, value) {
-  state = setGrade(state, id, value);
+async function onAttemptChange(course, index, value) {
+  state = setAttempt(state, course, index, value);
   await persist();
   refreshAll();
 }
@@ -1413,6 +1642,20 @@ function wireGlobalControls() {
   els.togglePrecision.checked = prefs.get('fullPrecision', false) === true;
   els.togglePrecision.addEventListener('change', () => {
     prefs.set('fullPrecision', els.togglePrecision.checked);
+    refreshAll();
+  });
+
+  const maxFirst = maxAttemptsForYear(1, doc.progression);
+  const maxLast = maxAttemptsForYear(doc.years.length, doc.progression);
+  els.toggleRepeatsLabel.textContent = 'I repeated a course';
+  els.toggleRepeats.title =
+    `Show a grade box for every sitting of a course. Each sitting counts separately: its units go ` +
+    `into the total again and its points are added again, so repeating a course lowers the GPA. ` +
+    `A First Year course allows up to ${maxFirst} sittings and a Final Year course up to ${maxLast}, ` +
+    `within the ${doc.progression?.maximum_years_to_graduate ?? 8}-year maximum.`;
+  els.toggleRepeats.checked = prefs.get('showRepeats', false) === true;
+  els.toggleRepeats.addEventListener('change', () => {
+    prefs.set('showRepeats', els.toggleRepeats.checked);
     refreshAll();
   });
 
@@ -1470,7 +1713,9 @@ function wireGlobalControls() {
 }
 
 function syncControlsFromState() {
-  for (const [id, ref] of rowRefs) ref.select.value = state.grades[id] ?? '';
+  // refreshAll() rebuilds every stack from the state, so the controls only need
+  // their stale values cleared first.
+  for (const [, ref] of rowRefs) for (const sel of ref.selects) sel.value = '';
 }
 
 function applyFilter() {
@@ -1480,11 +1725,26 @@ function applyFilter() {
     const c = ref.course;
     const hay = `${c.code} ${c.title ?? ''} ${c.legacyCode ?? ''}`.toLowerCase();
     const matches = (!q || hay.includes(q)) && (!onlyEntered || Boolean(state.grades[id]));
+
     ref.tr.classList.toggle('hidden', !matches);
   }
 }
 
 /* -------------------------------------------------------------- rendering */
+
+/**
+ * Whether the repeat-sitting controls are on show. The switch decides, but a
+ * student who already has repeats recorded always sees them: hiding sittings
+ * that are counting towards the GPA would make the figures unexplainable.
+ */
+function repeatsVisible() {
+  return els.toggleRepeats.checked || anyRepeatsRecorded();
+}
+
+function anyRepeatsRecorded() {
+  const r = state?.repeats ?? {};
+  return Object.keys(r).some((id) => Array.isArray(r[id]) && r[id].length > 0);
+}
 
 /** The reporting precision currently in force: the switch decides. */
 function reportOpts() {
@@ -1515,16 +1775,46 @@ function refreshAll() {
       const wanted = state.unitOverrides[ref.course.id];
       const str = Number.isFinite(wanted) ? String(wanted) : '';
       if (ref.unitInput.value !== str && document.activeElement !== ref.unitInput) ref.unitInput.value = str;
-    } else {
-      ref.tdUnits.textContent = String(ref.course.units);
     }
 
-    ref.select.classList.toggle('set', ev.grade !== null);
-    ref.select.dataset.grade = ev.grade ?? '';
-    ref.tdGp.innerHTML = ev.gradePoint === null ? '<span class="dash">—</span>' : String(ev.gradePoint);
+    // How many grade controls this row needs: one per sitting so far, plus a
+    // blank one to sit the course again — but only while repeats are on show
+    // and the course still has room within its allowance.
+    const roomLeft = ev.attemptCount < ev.maxAttempts;
+    const wanted = repeatsVisible()
+      ? Math.max(1, ev.attemptCount + (roomLeft ? 1 : 0))
+      : 1;
+    syncSelects(ref, wanted);
+
+    ref.selects.forEach((sel, i) => {
+      const g = ev.attempts[i]?.grade ?? '';
+      if (sel.value !== g && document.activeElement !== sel) sel.value = g;
+      sel.classList.toggle('set', Boolean(g));
+      sel.dataset.grade = g;
+      sel.setAttribute('aria-label',
+        wanted > 1 ? `${ref.course.code}, sitting ${i + 1} of up to ${ev.maxAttempts}`
+                   : `Grade for ${ref.course.code}`);
+      const wrap = sel.closest('.attempt');
+      wrap.classList.toggle('numbered', wanted > 1);
+      wrap.classList.toggle('pending', !g);
+    });
+    ref.stack.classList.toggle('multi', wanted > 1);
+    ref.stack.title = wanted > 1
+      ? `Every sitting counts separately. This course allows up to ${ev.maxAttempts} sittings.`
+      : '';
+
+    // Units and points reflect every sitting.
+    if (!ref.course.unitsUnknown) {
+      ref.tdUnits.innerHTML = ev.attemptCount > 1
+        ? `${ev.units}<span class="sub">${ev.baseUnits} × ${ev.attemptCount}</span>`
+        : String(ref.course.units);
+    }
+    const gps = ev.attempts.map((a) => a.gradePoint);
+    ref.tdGp.innerHTML = gps.length === 0 ? '<span class="dash">—</span>' : gps.join(' · ');
     ref.tdPt.innerHTML = ev.coursePoint === null ? '<span class="dash">—</span>' : String(ev.coursePoint);
     ref.tr.classList.toggle('active', ev.active);
     ref.tr.classList.toggle('blocked', ev.blocked);
+    ref.tr.classList.toggle('repeated', ev.repeatCount > 0);
   }
 
   // Semester strips.
@@ -1559,6 +1849,9 @@ function refreshAll() {
   els.gpa.textContent = total.gpaText;
   els.klass.textContent = total.gradedCourses ? (total.classification ?? '') : 'no results entered yet';
   els.courses.textContent = String(total.gradedCourses);
+  els.attemptsNote.textContent = total.repeats > 0
+    ? `${total.attempts} sittings · ${total.repeats} repeat${total.repeats > 1 ? 's' : ''}`
+    : '';
   els.units.textContent = String(total.units);
   els.points.textContent = String(total.points);
   els.cumCourses.textContent = String(total.gradedCourses);

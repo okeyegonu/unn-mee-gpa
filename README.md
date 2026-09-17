@@ -45,7 +45,7 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 69 calculation, persistence, preference and curriculum tests
+npm test             # 94 calculation, repeat, persistence, preference and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
@@ -77,11 +77,67 @@ Three rules matter, and the tests pin all three:
 - **An F is not a blank.** It is an attempted course: 0 points, but its units
   stay in the denominator. `2 units A` plus `3 units F` is 10 ÷ 5 = **2.00**,
   not 5.00.
+- **A repeated course counts once per sitting.** Failing a 3-unit course and
+  passing it next time contributes 6 units and 12 points, not 3 and 12. See
+  *Repeat sittings* below.
 - **Year and semester are labels, not rules.** They group the display and drive
   the per-semester and per-year panels. They never decide whether a course
   counts. A student may enter a First Year first-semester result, a Second Year
   second-semester result and a Fourth Year first-semester result and get a GPA
   over exactly those three.
+
+### Repeat sittings
+
+Mechanical Engineering takes a minimum of five years and a maximum of eight. A
+student who fails a course sits it again, and **every sitting counts separately**:
+
+```
+numerator   += units x gradePoint     for each sitting
+denominator += units                  for each sitting
+```
+
+So a failed sitting puts its units into the denominator while adding nothing to
+the numerator, and each further failure degrades the GPA again. A repeated
+course behaves exactly as though another course of the same size had been added
+to the programme — there is a test asserting that equivalence directly.
+
+A 3-unit course failed once and then passed with a B contributes 6 units and
+12 points, so that B is worth **2.00**, not 4.00.
+
+**The allowance.** A course first taken in year *x* may be repeated in each
+remaining year up to the programme maximum, giving `(8 - x)` repeats and
+`(9 - x)` sittings in total:
+
+| Year | Sittings allowed | Repeats |
+|---|---:|---:|
+| First | 8 | 7 |
+| Second | 7 | 6 |
+| Third | 6 | 5 |
+| Fourth | 5 | 4 |
+| Fifth | 4 | 3 |
+
+This comes from `progression.maximum_years_to_graduate` in
+`data/curriculum.json`; changing that one number moves the allowance for every
+year at once. The allowance is resolved onto each course as `maxAttempts` while
+the curriculum is flattened, so the GPA engine enforces it without ever looking
+at a year.
+
+**In the interface.** An **I repeated a course** checkbox in the toolbar turns
+on a grade box per sitting. Each sitting is numbered, and a dashed box is always
+offered for the next one until the allowance is reached. A course with repeats
+shows its contributed units as `9` with `3 × 3` beneath, lists the grade point
+of each sitting, and totals the course points.
+
+The checkbox is off by default. It switches itself on for anyone who already has
+repeats recorded, because hiding sittings that are counting towards the GPA would
+make the figures impossible to explain.
+
+**Storage.** The first sitting stays in `grades` exactly where it has always
+been; repeats live in a separate `repeats` map. A result saved before this
+feature existed therefore loads unchanged, and an older copy of the interface
+reading the same record still finds the first sitting where it expects it.
+Clearing the first sitting clears the whole course, since a repeat of a course
+that was never sat is meaningless.
 
 ### Reporting precision
 

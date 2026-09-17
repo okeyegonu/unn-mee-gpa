@@ -7,10 +7,11 @@
  */
 
 import { GRADES } from './grading.js';
-import { flattenCurriculum, semesterKeys } from './curriculum.js';
+import { flattenCurriculum, semesterKeys, maxAttemptsForYear } from './curriculum.js';
 import {
   emptyState, setGrade, setUnitOverride, clearAll,
   evaluateCourse, summarise, semesterSummaries, yearSummaries, formatGpa,
+  setAttempt,
 } from './gpa-engine.js';
 import { ResultsRepository, PreferencesStore } from './storage.js';
 
@@ -26,6 +27,9 @@ const els = {
   filterEntered: $('#filter-entered'),
   togglePrecision: $('#toggle-precision'),
   togglePrecisionLabel: $('#toggle-precision-label'),
+  toggleRepeats: $('#toggle-repeats'),
+  toggleRepeatsLabel: $('#toggle-repeats-label'),
+  attemptsNote: $('#stat-attempts'),
   gpa: $('#stat-gpa'),
   klass: $('#stat-class'),
   courses: $('#stat-courses'),
@@ -218,14 +222,9 @@ function buildRow(year, sem, rawCourse) {
 
   const tdGrade = document.createElement('td');
   tdGrade.className = 'cell-grade';
-  const select = document.createElement('select');
-  select.className = 'grade';
-  select.setAttribute('aria-label', `Grade for ${course.code}`);
-  select.append(new Option('—', ''));
-  for (const g of GRADES) select.append(new Option(g, g));
-  select.value = state.grades[course.id] ?? '';
-  select.addEventListener('change', () => onGradeChange(course.id, select.value));
-  tdGrade.append(select);
+  const stack = document.createElement('div');
+  stack.className = 'attempt-stack';
+  tdGrade.append(stack);
 
   const tdGp = document.createElement('td');
   tdGp.className = 'num cell-gp';
@@ -235,14 +234,39 @@ function buildRow(year, sem, rawCourse) {
   tdPt.dataset.label = 'Course pt';
 
   tr.append(tdCode, tdTitle, tdUnits, tdGrade, tdGp, tdPt);
-  rowRefs.set(course.id, { tr, select, tdUnits, tdGp, tdPt, course });
+  rowRefs.set(course.id, { tr, stack, selects: [], tdUnits, tdGp, tdPt, course });
   return tr;
+}
+
+/**
+ * Make the row show exactly `count` grade controls, reusing the ones already
+ * there. Reusing rather than rebuilding is what keeps the control the student
+ * just changed from losing focus when the row re-renders.
+ */
+function syncSelects(ref, count) {
+  while (ref.selects.length < count) {
+    const index = ref.selects.length;
+    const sel = document.createElement('select');
+    sel.className = 'grade';
+    sel.append(new Option('—', ''));
+    for (const g of GRADES) sel.append(new Option(g, g));
+    sel.addEventListener('change', () => onAttemptChange(ref.course, index, sel.value));
+    const wrap = document.createElement('span');
+    wrap.className = 'attempt';
+    wrap.dataset.sitting = String(index + 1);
+    wrap.append(sel);
+    ref.stack.append(wrap);
+    ref.selects.push(sel);
+  }
+  while (ref.selects.length > count) {
+    ref.selects.pop().closest('.attempt').remove();
+  }
 }
 
 /* ---------------------------------------------------------------- events */
 
-async function onGradeChange(id, value) {
-  state = setGrade(state, id, value);
+async function onAttemptChange(course, index, value) {
+  state = setAttempt(state, course, index, value);
   await persist();
   refreshAll();
 }
@@ -273,6 +297,20 @@ function wireGlobalControls() {
   els.togglePrecision.checked = prefs.get('fullPrecision', false) === true;
   els.togglePrecision.addEventListener('change', () => {
     prefs.set('fullPrecision', els.togglePrecision.checked);
+    refreshAll();
+  });
+
+  const maxFirst = maxAttemptsForYear(1, doc.progression);
+  const maxLast = maxAttemptsForYear(doc.years.length, doc.progression);
+  els.toggleRepeatsLabel.textContent = 'I repeated a course';
+  els.toggleRepeats.title =
+    `Show a grade box for every sitting of a course. Each sitting counts separately: its units go ` +
+    `into the total again and its points are added again, so repeating a course lowers the GPA. ` +
+    `A First Year course allows up to ${maxFirst} sittings and a Final Year course up to ${maxLast}, ` +
+    `within the ${doc.progression?.maximum_years_to_graduate ?? 8}-year maximum.`;
+  els.toggleRepeats.checked = prefs.get('showRepeats', false) === true;
+  els.toggleRepeats.addEventListener('change', () => {
+    prefs.set('showRepeats', els.toggleRepeats.checked);
     refreshAll();
   });
 
@@ -330,7 +368,9 @@ function wireGlobalControls() {
 }
 
 function syncControlsFromState() {
-  for (const [id, ref] of rowRefs) ref.select.value = state.grades[id] ?? '';
+  // refreshAll() rebuilds every stack from the state, so the controls only need
+  // their stale values cleared first.
+  for (const [, ref] of rowRefs) for (const sel of ref.selects) sel.value = '';
 }
 
 function applyFilter() {
@@ -340,11 +380,26 @@ function applyFilter() {
     const c = ref.course;
     const hay = `${c.code} ${c.title ?? ''} ${c.legacyCode ?? ''}`.toLowerCase();
     const matches = (!q || hay.includes(q)) && (!onlyEntered || Boolean(state.grades[id]));
+
     ref.tr.classList.toggle('hidden', !matches);
   }
 }
 
 /* -------------------------------------------------------------- rendering */
+
+/**
+ * Whether the repeat-sitting controls are on show. The switch decides, but a
+ * student who already has repeats recorded always sees them: hiding sittings
+ * that are counting towards the GPA would make the figures unexplainable.
+ */
+function repeatsVisible() {
+  return els.toggleRepeats.checked || anyRepeatsRecorded();
+}
+
+function anyRepeatsRecorded() {
+  const r = state?.repeats ?? {};
+  return Object.keys(r).some((id) => Array.isArray(r[id]) && r[id].length > 0);
+}
 
 /** The reporting precision currently in force: the switch decides. */
 function reportOpts() {
@@ -375,16 +430,46 @@ function refreshAll() {
       const wanted = state.unitOverrides[ref.course.id];
       const str = Number.isFinite(wanted) ? String(wanted) : '';
       if (ref.unitInput.value !== str && document.activeElement !== ref.unitInput) ref.unitInput.value = str;
-    } else {
-      ref.tdUnits.textContent = String(ref.course.units);
     }
 
-    ref.select.classList.toggle('set', ev.grade !== null);
-    ref.select.dataset.grade = ev.grade ?? '';
-    ref.tdGp.innerHTML = ev.gradePoint === null ? '<span class="dash">—</span>' : String(ev.gradePoint);
+    // How many grade controls this row needs: one per sitting so far, plus a
+    // blank one to sit the course again — but only while repeats are on show
+    // and the course still has room within its allowance.
+    const roomLeft = ev.attemptCount < ev.maxAttempts;
+    const wanted = repeatsVisible()
+      ? Math.max(1, ev.attemptCount + (roomLeft ? 1 : 0))
+      : 1;
+    syncSelects(ref, wanted);
+
+    ref.selects.forEach((sel, i) => {
+      const g = ev.attempts[i]?.grade ?? '';
+      if (sel.value !== g && document.activeElement !== sel) sel.value = g;
+      sel.classList.toggle('set', Boolean(g));
+      sel.dataset.grade = g;
+      sel.setAttribute('aria-label',
+        wanted > 1 ? `${ref.course.code}, sitting ${i + 1} of up to ${ev.maxAttempts}`
+                   : `Grade for ${ref.course.code}`);
+      const wrap = sel.closest('.attempt');
+      wrap.classList.toggle('numbered', wanted > 1);
+      wrap.classList.toggle('pending', !g);
+    });
+    ref.stack.classList.toggle('multi', wanted > 1);
+    ref.stack.title = wanted > 1
+      ? `Every sitting counts separately. This course allows up to ${ev.maxAttempts} sittings.`
+      : '';
+
+    // Units and points reflect every sitting.
+    if (!ref.course.unitsUnknown) {
+      ref.tdUnits.innerHTML = ev.attemptCount > 1
+        ? `${ev.units}<span class="sub">${ev.baseUnits} × ${ev.attemptCount}</span>`
+        : String(ref.course.units);
+    }
+    const gps = ev.attempts.map((a) => a.gradePoint);
+    ref.tdGp.innerHTML = gps.length === 0 ? '<span class="dash">—</span>' : gps.join(' · ');
     ref.tdPt.innerHTML = ev.coursePoint === null ? '<span class="dash">—</span>' : String(ev.coursePoint);
     ref.tr.classList.toggle('active', ev.active);
     ref.tr.classList.toggle('blocked', ev.blocked);
+    ref.tr.classList.toggle('repeated', ev.repeatCount > 0);
   }
 
   // Semester strips.
@@ -419,6 +504,9 @@ function refreshAll() {
   els.gpa.textContent = total.gpaText;
   els.klass.textContent = total.gradedCourses ? (total.classification ?? '') : 'no results entered yet';
   els.courses.textContent = String(total.gradedCourses);
+  els.attemptsNote.textContent = total.repeats > 0
+    ? `${total.attempts} sittings · ${total.repeats} repeat${total.repeats > 1 ? 's' : ''}`
+    : '';
   els.units.textContent = String(total.units);
   els.points.textContent = String(total.points);
   els.cumCourses.textContent = String(total.gradedCourses);

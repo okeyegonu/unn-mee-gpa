@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ResultsRepository, MemoryBackend, PreferencesStore, STORAGE_KEY, PREFS_KEY } from '../src/storage.js';
-import { emptyState, setGrade, setUnitOverride, summarise } from '../src/gpa-engine.js';
+import { emptyState, setGrade, setAttempt, setUnitOverride, summarise } from '../src/gpa-engine.js';
 
 const CID = 'unn-mee-beng-5yr';
 const V = '2023.1';
@@ -260,7 +260,7 @@ test('preferences never leak into the results record or an export', async () => 
 
   const record = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
   assert.deepEqual(Object.keys(record).sort(),
-    ['curriculum_id', 'curriculum_version', 'grades', 'saved_at', 'unitOverrides']);
+    ['curriculum_id', 'curriculum_version', 'grades', 'repeats', 'saved_at', 'unitOverrides']);
   assert.ok(!('fullPrecision' in record));
 
   const payload = await repo.exportPayload(state);
@@ -301,4 +301,127 @@ test('corrupt preference data is ignored rather than fatal', () => {
     const prefs = new PreferencesStore({ backend: new MemoryBackend({ [PREFS_KEY]: junk }) });
     assert.deepEqual(prefs.read(), {}, `junk: ${junk}`);
   }
+});
+
+/* ---- repeat sittings must persist exactly like first sittings ---- */
+
+test('repeat sittings survive a reload', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'y3s1-MEE313', units: 3, maxAttempts: 6 };
+
+  let repo = reload(backend);
+  let state = (await repo.load()).state;
+  state = setGrade(state, course.id, 'F');
+  state = setAttempt(state, course, 1, 'F');
+  state = setAttempt(state, course, 2, 'B');
+  await repo.save(state);
+
+  repo = reload(backend);
+  const loaded = await repo.load();
+  assert.deepEqual(loaded.state.grades, { 'y3s1-MEE313': 'F' }, 'first sitting stays in grades');
+  assert.deepEqual(loaded.state.repeats, { 'y3s1-MEE313': ['F', 'B'] }, 'repeats stored separately');
+
+  // 3x0 + 3x0 + 3x4 = 12 over 9 units
+  const r = summarise([course], loaded.state);
+  assert.equal(r.attempts, 3);
+  assert.equal(r.units, 9);
+  assert.equal(r.points, 12);
+  assert.equal(r.gpaText, '1.33');
+});
+
+test('repeat sittings are idempotent across repeated saves', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 6 };
+  const repo = reload(backend);
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'B');
+
+  for (let i = 0; i < 20; i++) await repo.save(state);
+
+  const rec = JSON.parse(backend.getItem(STORAGE_KEY)).records[`${CID}@${V}`];
+  assert.deepEqual(rec.repeats, { c1: ['B'] }, 'one entry, not twenty');
+  assert.equal(Object.keys(rec.grades).length, 1);
+});
+
+test('a record saved before repeats existed still loads', async () => {
+  // Exactly the shape the first shipped version wrote.
+  const legacy = {
+    schema_version: 1,
+    active: `${CID}@${V}`,
+    records: {
+      [`${CID}@${V}`]: {
+        curriculum_id: CID, curriculum_version: V, saved_at: '2026-09-17T20:00:00.000Z',
+        grades: { 'y1s1-MTH101': 'A', 'y3s1-MEE313': 'F' },
+        unitOverrides: {},
+      },
+    },
+  };
+  const backend = new MemoryBackend({ [STORAGE_KEY]: JSON.stringify(legacy) });
+  const loaded = await reload(backend).load();
+  assert.equal(loaded.found, true);
+  assert.deepEqual(loaded.state.grades, { 'y1s1-MTH101': 'A', 'y3s1-MEE313': 'F' });
+  assert.deepEqual(loaded.state.repeats, {}, 'no repeats, and no crash');
+
+  // and a repeat can then be added on top of it
+  const course = { id: 'y3s1-MEE313', units: 3, maxAttempts: 6 };
+  const repo = reload(backend);
+  await repo.save(setAttempt(loaded.state, course, 1, 'C'));
+  assert.deepEqual((await reload(backend).load()).state.repeats, { 'y3s1-MEE313': ['C'] });
+});
+
+test('malformed repeat data is dropped rather than trusted', async () => {
+  const hostile = {
+    schema_version: 1,
+    records: {
+      [`${CID}@${V}`]: {
+        curriculum_id: CID, curriculum_version: V,
+        grades: { c1: 'A' },
+        repeats: { c1: ['B', 42, null, {}, 'C'], c2: 'not an array', c3: [] },
+        unitOverrides: {},
+      },
+    },
+  };
+  const backend = new MemoryBackend({ [STORAGE_KEY]: JSON.stringify(hostile) });
+  const loaded = await reload(backend).load();
+  assert.deepEqual(loaded.state.repeats, { c1: ['B', 'C'] },
+    'non-strings dropped, non-array entries dropped, empty lists dropped');
+});
+
+test('an export carries repeat sittings and imports them back', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 6 };
+  const repo = reload(backend);
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'B');
+  await repo.save(state);
+
+  const payload = await repo.exportPayload(state);
+  assert.deepEqual(payload.repeats, { c1: ['B'] });
+
+  const round = repo.parseImport(JSON.parse(JSON.stringify(payload)));
+  assert.deepEqual(round.state.repeats, { c1: ['B'] });
+  assert.equal(summarise([course], round.state).units, 6);
+});
+
+test('an export from before repeats existed imports cleanly', () => {
+  const repo = reload(new MemoryBackend());
+  const round = repo.parseImport({
+    format: 'unn-mee-gpa-calculator-export',
+    curriculum_version: V,
+    grades: { c1: 'A' },
+  });
+  assert.deepEqual(round.state.repeats, {});
+});
+
+test('clearing results clears repeats too', async () => {
+  const backend = new MemoryBackend();
+  const course = { id: 'c1', units: 3, maxAttempts: 6 };
+  const repo = reload(backend);
+  let state = setGrade((await repo.load()).state, 'c1', 'F');
+  state = setAttempt(state, course, 1, 'B');
+  await repo.save(state);
+  await repo.clear();
+  const loaded = await reload(backend).load();
+  assert.deepEqual(loaded.state.grades, {});
+  assert.deepEqual(loaded.state.repeats, {});
 });

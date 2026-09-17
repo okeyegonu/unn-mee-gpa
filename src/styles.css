@@ -161,6 +161,42 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
 .colophon { margin-top: 28px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; }
 .colophon code { font-family: var(--mono); }
 
+/* ---------- repeat sittings ---------- */
+
+.attempt-stack { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.attempt-stack:not(.multi) { gap: 0; }
+
+.attempt { position: relative; display: inline-flex; }
+
+/* Number each sitting once there is more than one, so "the second time I sat
+   this course" is unambiguous. */
+.attempt.numbered::before {
+  content: attr(data-sitting);
+  position: absolute;
+  top: -6px; left: -6px;
+  min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 999px;
+  background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+  font-family: var(--mono);
+  z-index: 1;
+}
+/* The trailing blank box is an invitation, not a result. */
+.attempt.numbered.pending::before { background: var(--ink-faint); }
+.attempt.pending select.grade { border-style: dashed; color: var(--ink-faint); }
+
+table.courses tr.repeated { background: #fdf6e8; }
+table.courses tr.repeated.active { background: #f6f2e4; }
+
+/* The units cell shows base x sittings when a course was sat more than once. */
+td.cell-units .sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+
 /* ================================================================
    Small screens — Firefox and Chrome on Android, Safari/Chrome on iOS.
 
@@ -270,6 +306,12 @@ table.totals .strong { color: var(--accent); font-size: 16px; font-weight: 700; 
   td.cell-units, td.cell-gp, td.cell-pt {
     font-size: 13px; margin-top: 4px; white-space: nowrap; text-align: left;
   }
+
+  /* a repeated course stacks its sittings vertically on a narrow screen */
+  .attempt-stack { justify-content: flex-end; gap: 8px; }
+  .attempt-stack.multi { flex-direction: column; align-items: flex-end; }
+  td.cell-grade { align-self: start; padding-top: 2px; }
+  td.cell-units .sub { display: inline; margin-left: 4px; }
 
   /* comfortable tap targets; 16px text so mobile Safari/Chrome do not zoom */
   select.grade {

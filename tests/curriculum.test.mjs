@@ -70,8 +70,10 @@ test('each semester whose total is stated in the source reconciles exactly', () 
       const key = `y${year.year}s${sem.semester}`;
       if (!(key in expected)) continue;
       assert.equal(sem.stated_total_units, expected[key], `${key} stated total`);
-      const here = courses.filter((c) => c.year === year.year && c.semester === sem.semester);
-      const compulsory = here.filter((c) => c.groupType !== 'elective').reduce((a, c) => a + c.units, 0);
+      const here = courses.filter(
+        (c) => c.year === year.year && c.semester === sem.semester && c.cohortId === null,
+      );
+      const compulsory = here.filter((c) => c.groupType === 'compulsory').reduce((a, c) => a + c.units, 0);
       const electiveUnits = sem.groups.find((g) => g.type === 'elective')?.choose_units ?? 0;
       assert.equal(compulsory + electiveUnits, expected[key], `${key} computed total`);
     }
@@ -79,7 +81,7 @@ test('each semester whose total is stated in the source reconciles exactly', () 
 });
 
 test('First Year, First Semester is the handwritten revision, not the printed list', () => {
-  const y1s1 = courses.filter((c) => c.year === 1 && c.semester === 1);
+  const y1s1 = courses.filter((c) => c.year === 1 && c.semester === 1 && c.cohortId === null);
   assert.deepEqual(y1s1.map((c) => c.code),
     ['MTH 101', 'MTH 103', 'CHM 101', 'CHM 107', 'PHY 101', 'PHY 107', 'GST 111', 'MEE 101', 'PHY 103', 'GET 101']);
   assert.equal(y1s1.reduce((a, c) => a + c.units, 0), 16);
@@ -225,4 +227,85 @@ test('the active-course decision never reads year, semester or group', () => {
         `${fn.name} must not reference "${token}"`);
     }
   }
+});
+
+/* --------------------------------------------------------------------------
+   The pre-CCMAS First Year, carried for students still in the system who sat
+   it. It is additive: the CCMAS courses are untouched by its presence.
+   -------------------------------------------------------------------------- */
+
+const current = courses.filter((c) => c.cohortId === null);
+const cohort = courses.filter((c) => c.cohortId === 'pre-ccmas');
+
+test('the CCMAS first year is completely unaffected by the cohort', () => {
+  const y1s1 = current.filter((c) => c.year === 1 && c.semester === 1);
+  const y1s2 = current.filter((c) => c.year === 1 && c.semester === 2);
+
+  assert.deepEqual(y1s1.map((c) => c.code),
+    ['MTH 101', 'MTH 103', 'CHM 101', 'CHM 107', 'PHY 101', 'PHY 107', 'GST 111', 'MEE 101', 'PHY 103', 'GET 101']);
+  assert.deepEqual(y1s2.map((c) => c.code),
+    ['PHY 104', 'STA 112', 'CHM 102', 'GST 114', 'CHM 108', 'PHY 102', 'PHY 108', 'MTH 102', 'GET 102']);
+  assert.equal(y1s1.reduce((a, c) => a + c.units, 0), 16);
+  assert.equal(y1s2.reduce((a, c) => a + c.units, 0), 16);
+  assert.equal(current.length, 103, 'the CCMAS curriculum is still exactly 103 courses');
+});
+
+test('CCMAS course ids are unchanged, so saved student results keep loading', () => {
+  // These are the ids the shipped version wrote into students' browsers.
+  for (const id of ['y1s1-MTH101', 'y1s1-CHM101', 'y1s2-PHY104', 'y2s2-MEE202', 'y3s1-MEE313', 'y5s2-MEE592']) {
+    assert.ok(courses.some((c) => c.id === id && c.cohortId === null), id);
+  }
+  assert.equal(courseId(1, 1, 'MTH 101'), 'y1s1-MTH101', 'the id scheme for current courses is untouched');
+});
+
+test('the pre-CCMAS list reproduces page 25 exactly', () => {
+  const y1s1 = cohort.filter((c) => c.semester === 1);
+  const y1s2 = cohort.filter((c) => c.semester === 2);
+
+  assert.deepEqual(y1s1.map((c) => [c.code, c.units]), [
+    ['CHM 101', 2], ['CHM 171', 2], ['EGR 101', 2], ['MTH 111', 3], ['MTH 121', 3],
+    ['PHY 121', 3], ['PHY 195', 2], ['GSP 101', 2], ['GSP 111', 2],
+  ]);
+  assert.deepEqual(y1s2.map((c) => [c.code, c.units]), [
+    ['CHM 112', 2], ['CHM 122', 2], ['EGR 102', 3], ['MTH 122', 3],
+    ['PHY 116', 2], ['PHY 124', 3], ['GSP 102', 2],
+  ]);
+  assert.equal(y1s1.reduce((a, c) => a + c.units, 0), 21, 'the printed First Semester total');
+  assert.equal(y1s2.reduce((a, c) => a + c.units, 0), 17, 'the printed Second Semester total');
+  assert.equal(cohort.length, 16);
+  for (const c of cohort) {
+    assert.equal(c.year, 1, 'the cohort covers First Year only');
+    assert.ok(c.title, `${c.code} has a title from the printed programme`);
+  }
+});
+
+test('cohort courses carry their own ids and cannot collide with current ones', () => {
+  assert.equal(courseId(1, 1, 'CHM 101', 'pre-ccmas'), 'y1s1-pre-ccmas-CHM101');
+  const chm = courses.filter((c) => c.code === 'CHM 101');
+  assert.equal(chm.length, 2, 'CHM 101 survived the revision and is in both lists');
+  assert.equal(new Set(chm.map((c) => c.id)).size, 2, 'with distinct ids');
+  assert.deepEqual(chm.map((c) => c.id).sort(), ['y1s1-CHM101', 'y1s1-pre-ccmas-CHM101']);
+  assert.equal(new Set(courses.map((c) => c.id)).size, courses.length, 'every id is still unique');
+});
+
+test('the cohort is declared in the curriculum metadata', () => {
+  assert.equal(doc.cohorts.length, 1);
+  assert.equal(doc.cohorts[0].cohort_id, 'pre-ccmas');
+  assert.deepEqual(doc.cohorts[0].applies_to, ['year 1']);
+  assert.equal(doc.cohorts[0].source_id, 'pdf-bachelors-2023');
+});
+
+test('a cohort course counts exactly like any other once graded', () => {
+  const mth111 = courses.find((c) => c.id === 'y1s1-pre-ccmas-MTH111');   // 3 units
+  const mth101 = courses.find((c) => c.id === 'y1s1-MTH101');             // 2 units
+  assert.equal(mth111.units, 3);
+  assert.equal(mth111.maxAttempts, 8, 'and gets the First Year repeat allowance');
+
+  const a = summarise(courses, setGrade(emptyState(), mth111.id, 'A'));
+  assert.equal(a.units, 3);
+  assert.equal(a.points, 15);
+
+  const b = summarise(courses, setGrade(emptyState(), mth101.id, 'A'));
+  assert.equal(b.units, 2, 'the CCMAS course is unaffected and still 2 units');
+  assert.equal(b.points, 10);
 });

@@ -115,6 +115,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 20px 80px; }
 }
 .group-head strong { color: var(--ink); }
 .group-head.elective { background: var(--warn-soft); color: var(--warn); border-bottom-color: #ecd9a8; }
+.group-head.cohort { background: #eef2f8; color: #33465e; border-bottom-color: #d6dfec; }
+table.courses[data-cohort] tbody tr { background: #fbfcfe; }
+table.courses[data-cohort] tbody tr.active { background: var(--accent-soft); }
 
 /* ---------- course table ---------- */
 table.courses { width: 100%; border-collapse: collapse; }

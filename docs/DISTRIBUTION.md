@@ -152,7 +152,7 @@ WhatsApp does not compress documents, so it arrives intact.
 ## Before you send
 
 ```bash
-npm test              # 119 calculation, repeat, persistence, preference and curriculum tests
+npm test              # 125 calculation, repeat, cohort, persistence, preference and curriculum tests
 npm run validate      # regenerates docs/curriculum-validation.md
 npm run build         # regenerates dist/unn-mee-gpa-calculator.html
 ```

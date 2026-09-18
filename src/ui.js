@@ -7,7 +7,7 @@
  */
 
 import { GRADES } from './grading.js';
-import { flattenCurriculum, semesterKeys, maxAttemptsForYear } from './curriculum.js';
+import { flattenCurriculum, semesterKeys, maxAttemptsForYear, courseId, indexCourses } from './curriculum.js';
 import {
   emptyState, setGrade, setUnitOverride, clearAll,
   evaluateCourse, summarise, semesterSummaries, yearSummaries, formatGpa,
@@ -29,6 +29,9 @@ const els = {
   togglePrecisionLabel: $('#toggle-precision-label'),
   toggleRepeats: $('#toggle-repeats'),
   toggleRepeatsLabel: $('#toggle-repeats-label'),
+  toggleCohort: $('#toggle-cohort'),
+  toggleCohortLabel: $('#toggle-cohort-label'),
+  cohortNotice: $('#cohort-notice'),
   attemptsNote: $('#stat-attempts'),
   gpa: $('#stat-gpa'),
   klass: $('#stat-class'),
@@ -52,6 +55,7 @@ let doc = null;         // the curriculum document
 let prefs = null;       // display preferences, per viewer
 let precision = { normal: 2, full: 5 };   // from reporting.* in the data file
 let courses = [];       // flat course records
+let byId = new Map();   // id -> course
 let state = null;       // { curriculumVersion, grades, unitOverrides }
 let repo = null;
 const rowRefs = new Map();   // courseId -> { tr, select, unitCell, gpCell, pointCell }
@@ -81,6 +85,7 @@ async function boot() {
   }
 
   courses = flattenCurriculum(doc);
+  byId = indexCourses(courses);
   precision = {
     normal: doc.reporting?.gpa_decimal_places ?? 2,
     full: doc.reporting?.gpa_full_precision_places ?? 5,
@@ -160,12 +165,19 @@ function buildSemester(year, sem) {
   header.append(h3, summary);
   wrap.append(header);
 
+  const currentGroups = sem.groups.filter((g) => g.type !== 'cohort').length;
   for (const group of sem.groups) {
     const isElective = group.type === 'elective';
-    if (isElective || sem.groups.length > 1) {
+    const isCohort = group.type === 'cohort';
+    // A heading appears for electives and cohorts, and for the current courses
+    // only where there was already more than one group of them — so adding a
+    // cohort never changes how the current list looks.
+    if (isElective || isCohort || currentGroups > 1) {
       const gh = document.createElement('div');
-      gh.className = 'group-head' + (isElective ? ' elective' : '');
+      gh.className = 'group-head' + (isElective ? ' elective' : '') + (isCohort ? ' cohort' : '');
+      if (isCohort) gh.dataset.cohort = group.cohort_id;
       gh.innerHTML = `<strong>${escapeHtml(group.label)}</strong>` +
+        (isCohort ? ` — ${escapeHtml(group.note ?? '')}` : '') +
         (isElective && group.choose
           ? ` — the programme says choose ${group.choose} course${group.choose > 1 ? 's' : ''}` +
             (group.choose_units ? ` (${group.choose_units} units)` : '') +
@@ -176,6 +188,7 @@ function buildSemester(year, sem) {
 
     const table = document.createElement('table');
     table.className = 'courses';
+    if (isCohort) table.dataset.cohort = group.cohort_id;
     table.innerHTML =
       '<thead><tr>' +
       '<th>Course</th><th class="col-title">Title</th>' +
@@ -185,19 +198,23 @@ function buildSemester(year, sem) {
     const tbody = table.tBodies[0];
 
     for (const c of group.courses) {
-      tbody.append(buildRow(year, sem, c));
+      tbody.append(buildRow(year, sem, group, c));
     }
     wrap.append(table);
   }
   return wrap;
 }
 
-function buildRow(year, sem, rawCourse) {
-  const course = courses.find(
-    (c) => c.year === year.year && c.semester === sem.semester && c.code === rawCourse.code,
-  );
+function buildRow(year, sem, group, rawCourse) {
+  // Look the course up by its id, not by its code: a code can appear in both
+  // the current curriculum and an alternative cohort, and the two are
+  // different courses with different ids.
+  const id = courseId(year.year, sem.semester, rawCourse.code, group.cohort_id ?? null);
+  const course = byId.get(id);
+  if (!course) throw new Error(`no flattened course for ${id}`);
   const tr = document.createElement('tr');
   tr.dataset.id = course.id;
+  if (course.cohortId) tr.dataset.cohort = course.cohortId;
 
   const tdCode = document.createElement('td');
   tdCode.className = 'c-code';
@@ -321,6 +338,16 @@ function wireGlobalControls() {
     refreshAll();
   });
 
+  const cohort = (doc.cohorts ?? [])[0] ?? null;
+  els.toggleCohortLabel.textContent = 'Show pre-CCMAS first-year courses';
+  els.toggleCohort.title = cohort?.description ??
+    'Show the First Year as printed in the 2023 programme, for students who began before the CCMAS revision.';
+  els.toggleCohort.checked = prefs.get('showCohort', false) === true;
+  els.toggleCohort.addEventListener('change', () => {
+    prefs.set('showCohort', els.toggleCohort.checked);
+    refreshAll();
+  });
+
   els.btnExport.addEventListener('click', async () => {
     const payload = await repo.exportPayload(state, {
       institution: doc.institution,
@@ -384,10 +411,13 @@ function syncControlsFromState() {
 function applyFilter() {
   const q = els.filterText.value.trim().toLowerCase();
   const onlyEntered = els.filterEntered.checked;
+  const showCohort = cohortVisible();
   for (const [id, ref] of rowRefs) {
     const c = ref.course;
     const hay = `${c.code} ${c.title ?? ''} ${c.legacyCode ?? ''}`.toLowerCase();
-    const matches = (!q || hay.includes(q)) && (!onlyEntered || Boolean(state.grades[id]));
+    const matches = (!q || hay.includes(q))
+      && (!onlyEntered || Boolean(state.grades[id]))
+      && (!c.cohortId || showCohort);
 
     ref.tr.classList.toggle('hidden', !matches);
   }
@@ -402,6 +432,31 @@ function applyFilter() {
  */
 function repeatsVisible() {
   return els.toggleRepeats.checked || anyRepeatsRecorded();
+}
+
+/**
+ * Whether the alternative first-year list is on show. As with repeats, a
+ * student who has already graded one of those courses always sees them: hiding
+ * a course that is counting towards the GPA would make the figures
+ * unexplainable.
+ */
+function cohortVisible() {
+  return els.toggleCohort.checked || anyCohortGraded();
+}
+
+function anyCohortGraded() {
+  for (const c of courses) {
+    if (c.cohortId && state?.grades?.[c.id]) return true;
+  }
+  return false;
+}
+
+function applyCohortVisibility() {
+  const show = cohortVisible();
+  for (const el of document.querySelectorAll('[data-cohort]')) {
+    if (el.tagName === 'TR') continue;          // rows are handled by the filter
+    el.hidden = !show;
+  }
 }
 
 function anyRepeatsRecorded() {
@@ -540,7 +595,36 @@ function refreshAll() {
     els.versionNotice.hidden = true;
   }
 
+  applyCohortVisibility();
   applyFilter();
+  warnAboutDoubleListing();
+}
+
+/**
+ * A handful of courses survived the CCMAS revision unchanged and so appear in
+ * both lists. Grading one in both places counts it twice, which is almost
+ * certainly a mistake — but it is the student's record, so this says so rather
+ * than preventing it.
+ */
+function warnAboutDoubleListing() {
+  const graded = new Map();
+  for (const c of courses) {
+    if (!state.grades?.[c.id]) continue;
+    if (!graded.has(c.code)) graded.set(c.code, []);
+    graded.get(c.code).push(c);
+  }
+  const doubled = [...graded.entries()]
+    .filter(([, list]) => list.length > 1 && new Set(list.map((c) => c.cohortId)).size > 1)
+    .map(([code]) => code);
+
+  els.cohortNotice.hidden = doubled.length === 0;
+  if (doubled.length > 0) {
+    els.cohortNotice.innerHTML =
+      `<strong>${doubled.map(escapeHtml).join(', ')} ${doubled.length > 1 ? 'are' : 'is'} graded ` +
+      `in both the current and the pre-CCMAS first-year list.</strong> ` +
+      `${doubled.length > 1 ? 'Those courses are' : 'That course is'} being counted twice. ` +
+      `Keep the grade in whichever list you actually offered and clear the other.`;
+  }
 }
 
 function publicSummary() {

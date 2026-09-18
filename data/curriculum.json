@@ -9,6 +9,15 @@
   "award": "B.Eng.",
   "programme_track": "Five-Year Undergraduate Programme",
   "grade_scale": { "A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0 },
+  "cohorts": [
+    {
+      "cohort_id": "pre-ccmas",
+      "label": "Pre-CCMAS First Year",
+      "applies_to": ["year 1"],
+      "description": "Students who began the programme before the CCMAS revision sat the First Year as printed in the 2023 bachelors programme, page 25, rather than the revised First Year on the pre-computation form. Those courses are carried alongside the current ones and shown only when asked for; which set a student actually offered is for the student to say.",
+      "source_id": "pdf-bachelors-2023"
+    }
+  ],
   "progression": {
     "minimum_years_to_graduate": 5,
     "maximum_years_to_graduate": 8,
@@ -67,10 +76,28 @@
                 { "code": "PHY 103", "title": null, "units": 2, "category": "Required Ancillary", "title_unknown": true, "notes": "Added by the handwritten revision; no course title is stated on the form." },
                 { "code": "GET 101", "title": null, "units": 1, "category": "Major", "title_unknown": true, "notes": "Added by the handwritten revision; no course title is stated on the form." }
               ]
+            },
+            {
+              "group_id": "y1s1-pre-ccmas",
+              "type": "cohort",
+              "cohort_id": "pre-ccmas",
+              "label": "Pre-CCMAS First Year — 2023 programme as printed",
+              "choose": null,
+              "total_units": 21,
+              "source_id": "pdf-bachelors-2023",
+              "note": "The First Year as printed in the 2023 bachelors programme, section 2.1.1, page 25. Students who began before the CCMAS revision sat these courses instead of the ones above. They are hidden until asked for, and it is for the student to select the courses they actually offered.",
+              "courses": [
+                { "code": "CHM 101", "title": "Basic Principles of Chemistry I", "units": 2, "category": "Required Ancillary" },
+                { "code": "CHM 171", "title": "Basic Practical Chemistry", "units": 2, "category": "Required Ancillary" },
+                { "code": "EGR 101", "title": "Introduction to Engineering", "units": 2, "category": "Required Ancillary" },
+                { "code": "MTH 111", "title": "Elementary Mathematics I", "units": 3, "category": "Required Ancillary" },
+                { "code": "MTH 121", "title": "Elementary Mathematics II", "units": 3, "category": "Required Ancillary" },
+                { "code": "PHY 121", "title": "Fundamentals of Physics I", "units": 3, "category": "Required Ancillary" },
+                { "code": "PHY 195", "title": "Practical Physics II", "units": 2, "category": "Required Ancillary" },
+                { "code": "GSP 101", "title": "Use of English", "units": 2, "category": "General Studies" },
+                { "code": "GSP 111", "title": "The Use of Library and Study Skills", "units": 2, "category": "General Studies" }
+              ]
             }
-          ],
-          "removed_from_earlier_revision": [
-            { "code": "GSP 111", "title": "The Use of Library and Study Skills", "units": 2, "notes": "Struck out on the form with no replacement." }
           ]
         },
         {
@@ -97,16 +124,26 @@
                 { "code": "MTH 102", "title": null, "units": 2, "category": "Required Ancillary", "title_unknown": true },
                 { "code": "GET 102", "title": null, "units": 2, "category": "Major", "title_unknown": true }
               ]
+            },
+            {
+              "group_id": "y1s2-pre-ccmas",
+              "type": "cohort",
+              "cohort_id": "pre-ccmas",
+              "label": "Pre-CCMAS First Year — 2023 programme as printed",
+              "choose": null,
+              "total_units": 17,
+              "source_id": "pdf-bachelors-2023",
+              "note": "The First Year as printed in the 2023 bachelors programme, section 2.1.1, page 25. Students who began before the CCMAS revision sat these courses instead of the ones above.",
+              "courses": [
+                { "code": "CHM 112", "title": "Basic Principles of Chemistry II", "units": 2, "category": "Required Ancillary" },
+                { "code": "CHM 122", "title": "Basic Principles of Organic Chemistry", "units": 2, "category": "Required Ancillary" },
+                { "code": "EGR 102", "title": "Applied Mechanics", "units": 3, "category": "Required Ancillary" },
+                { "code": "MTH 122", "title": "Elementary Mathematics III", "units": 3, "category": "Required Ancillary" },
+                { "code": "PHY 116", "title": "General Physics for Physical Science II", "units": 2, "category": "Required Ancillary" },
+                { "code": "PHY 124", "title": "Fundamentals of Physics III", "units": 3, "category": "Required Ancillary" },
+                { "code": "GSP 102", "title": "Use of English II", "units": 2, "category": "General Studies" }
+              ]
             }
-          ],
-          "superseded_printed_list": [
-            { "code": "MTH 122", "title": "Elementary Mathematics III", "units": 3 },
-            { "code": "CHM 112", "title": "Basic Principles of Chemistry II", "units": 2 },
-            { "code": "CHM 122", "title": "Basic Principles of Organic Chemistry", "units": 2 },
-            { "code": "PHY 116", "title": "General Physics for Physical Science II", "units": 2 },
-            { "code": "PHY 124", "title": "Fundamentals of Physics III", "units": 3 },
-            { "code": "GSP 102", "title": "Use of English II", "units": 2 },
-            { "code": "ENGR 102", "title": "Applied Mechanics", "units": 3 }
           ]
         }
       ]

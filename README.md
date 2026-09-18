@@ -45,11 +45,12 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 119 calculation, repeat, persistence, preference and curriculum tests
+npm test             # 125 calculation, repeat, cohort, persistence, preference and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
 npm run smoke:repeats# end-to-end checks for repeat sittings
+npm run smoke:cohort # end-to-end checks for the pre-CCMAS first year
 npm run smoke:mobile # the same at three phone viewports
 npm run smoke:offline# test the single-file build opened from file://
 ```
@@ -87,6 +88,33 @@ Three rules matter, and the tests pin all three:
   counts. A student may enter a First Year first-semester result, a Second Year
   second-semester result and a Fourth Year first-semester result and get a GPA
   over exactly those three.
+
+### The pre-CCMAS First Year
+
+Students still in the system began before the CCMAS revision and sat the First
+Year as printed in the 2023 bachelors programme, page 25 — `MTH 111`, `CHM 171`,
+`EGR 101`, `GSP 101` and the rest — rather than the revised First Year on the
+pre-computation form.
+
+Both lists are carried. A **Show pre-CCMAS first-year courses** checkbox reveals
+the older one; it is off by default, and it is for the student to select the
+courses they actually offered. The calculator enforces nothing.
+
+The addition is purely additive. **The CCMAS courses are untouched:** same codes,
+same units, same ids, same 16-unit semester totals, and no new heading above
+them. A student on the current curriculum sees exactly the 103 courses they saw
+before. The browser suite asserts that on every run.
+
+Cohort courses inherit everything else: repeat sittings, the pass rule, the
+First Year allowance of 8 sittings, canonical records and the precision switch
+all apply to them exactly as to any other course.
+
+`CHM 101` survived the revision unchanged and so appears in both lists. Cohort
+courses carry the cohort in their id (`y1s1-pre-ccmas-CHM101` against
+`y1s1-CHM101`), so the two never collide, and ids for current courses are
+unchanged so results already saved by students keep loading. If a student grades
+the same course in both lists the interface says so — it is being counted twice
+— but does not prevent it.
 
 ### Repeat sittings
 
@@ -249,6 +277,7 @@ gpa-calculator/
 │   ├── build-single-file.mjs       the offline single-file build
 │   ├── browser-smoke.mjs           end-to-end test in real Firefox
 │   ├── repeat-smoke.mjs            end-to-end checks for repeat sittings
+│   ├── cohort-smoke.mjs            end-to-end checks for the pre-CCMAS first year
 │   ├── mobile-smoke.mjs            phone-viewport layout checks
 │   └── file-url-smoke.mjs          offline-copy checks
 │
@@ -274,8 +303,10 @@ definitions; `src/ui.js` contains no course names at all.
 | First Year | `FIRST-YEAR-2026-09-17-18.30.34.jpeg` — the departmental *CGPA Result Pre-Computation Form*, using the handwritten revision that supersedes the printed codes |
 | Second to Fifth Year | `BACHELORS-PROGRAMME-14-JAN-2023-FINAL.pdf`, section 2.1, printed pages 26 to the top of page 30 |
 
-103 courses, every one with a known unit load. All ten semester totals
-reconcile — 16, 16, 19, 18, 20, 20, 22, 15, 18, 19.
+103 courses in the current curriculum, every one with a known unit load. All ten
+semester totals reconcile — 16, 16, 19, 18, 20, 20, 22, 15, 18, 19. A further 16
+courses carry the pre-CCMAS First Year (page 25, totalling 21 and 17), hidden
+until a student asks for them; see *The pre-CCMAS First Year* below.
 
 **Read [docs/curriculum-validation.md](docs/curriculum-validation.md).** It
 contains the full year → semester → course table and every ambiguity found in

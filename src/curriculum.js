@@ -22,9 +22,17 @@ export function maxAttemptsForYear(year, progression) {
   return Math.max(1, max - year + 1);
 }
 
-/** Stable unique id for a course: year + semester + course code. */
-export function courseId(year, semester, code) {
-  return `y${year}s${semester}-${String(code).replace(/\s+/g, '').toUpperCase()}`;
+/**
+ * Stable unique id for a course: year + semester + course code.
+ *
+ * A course belonging to an alternative cohort carries the cohort in its id too,
+ * because the same code can legitimately appear in both the current curriculum
+ * and the one it replaced — CHM 101 does. Ids for ordinary courses are
+ * unchanged, so results already saved by students keep loading.
+ */
+export function courseId(year, semester, code, cohortId = null) {
+  const c = String(code).replace(/\s+/g, '').toUpperCase();
+  return cohortId ? `y${year}s${semester}-${cohortId}-${c}` : `y${year}s${semester}-${c}`;
 }
 
 /**
@@ -47,7 +55,7 @@ export function flattenCurriculum(doc) {
       for (const group of sem.groups ?? []) {
         for (const c of group.courses ?? []) {
           out.push({
-            id: courseId(year.year, sem.semester, c.code),
+            id: courseId(year.year, sem.semester, c.code, group.cohort_id ?? null),
             code: c.code,
             title: c.title ?? null,
             titleUnknown: c.title_unknown === true || c.title == null,
@@ -61,6 +69,7 @@ export function flattenCurriculum(doc) {
             groupId: group.group_id,
             groupLabel: group.label,
             groupType: group.type,
+            cohortId: group.cohort_id ?? null,
             groupChoose: group.choose ?? null,
             groupNote: group.note ?? null,
             legacyCode: c.legacy_code ?? null,
@@ -129,8 +138,15 @@ export function validateCurriculum(doc) {
     byCode.get(c.code).push(c);
   }
   for (const [code, list] of byCode) {
-    if (list.length > 1) {
-      const where = list.map((c) => `Y${c.year}S${c.semester}`).join(', ');
+    if (list.length <= 1) continue;
+    const where = list.map((c) => `Y${c.year}S${c.semester}${c.cohortId ? ` (${c.cohortId})` : ''}`).join(', ');
+    // The same course appearing in both a cohort and the curriculum that
+    // replaced it is expected: it survived the revision unchanged.
+    const cohorts = new Set(list.map((c) => c.cohortId));
+    const sameSlot = new Set(list.map((c) => `${c.year}s${c.semester}`)).size === 1;
+    if (sameSlot && cohorts.size === list.length) {
+      info.push(`Course code ${code} is shared between the current curriculum and an alternative cohort (${where}); a student takes it once, under whichever list they offered.`);
+    } else {
       warnings.push(`Course code ${code} appears ${list.length} times (${where}).`);
     }
   }
@@ -172,10 +188,24 @@ export function validateCurriculum(doc) {
   // Declared semester totals vs. the sum of the courses actually listed.
   for (const year of doc.years ?? []) {
     for (const sem of year.semesters ?? []) {
-      const here = courses.filter((c) => c.year === year.year && c.semester === sem.semester);
-      const compulsory = here.filter((c) => c.groupType !== 'elective');
+      const here = courses.filter(
+        (c) => c.year === year.year && c.semester === sem.semester && c.cohortId === null,
+      );
+      const compulsory = here.filter((c) => c.groupType === 'compulsory');
       const unknown = here.filter((c) => c.unitsUnknown);
       const compulsorySum = compulsory.reduce((a, c) => a + (c.units ?? 0), 0);
+
+      // An alternative cohort is a self-contained list with its own total.
+      for (const g of (sem.groups ?? []).filter((x) => x.type === 'cohort')) {
+        const sum = (g.courses ?? []).reduce((a, c) => a + (c.units ?? 0), 0);
+        if (!Number.isFinite(g.total_units)) {
+          info.push(`${year.label} / ${sem.label}: cohort "${g.label}" states no total; cannot cross-check.`);
+        } else if (sum !== g.total_units) {
+          errors.push(`${year.label} / ${sem.label}: cohort "${g.label}" sums to ${sum} but states ${g.total_units}.`);
+        } else {
+          info.push(`${year.label} / ${sem.label}: cohort "${g.label}" sums to ${sum}, matching its stated total.`);
+        }
+      }
 
       let electiveUnits = 0;
       const electiveGroups = (sem.groups ?? []).filter((g) => g.type === 'elective');

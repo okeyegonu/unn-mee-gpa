@@ -79,7 +79,8 @@ for (const year of doc.years) {
       for (const c of g.courses) {
         const title = c.title ?? '_not stated in source_';
         const units = Number.isFinite(c.units) ? c.units : '**?**';
-        L.push(`| \`${c.code}\` | ${title} | ${units} | ${g.type === 'elective' ? g.label : 'Compulsory'} | ${c.category ?? ''} |`);
+        const group = g.type === 'compulsory' ? 'Compulsory' : g.label;
+        L.push(`| \`${c.code}\` | ${title} | ${units} | ${group} | ${c.category ?? ''} |`);
       }
     }
     const here = courses.filter((c) => c.year === year.year && c.semester === sem.semester);
@@ -131,12 +132,14 @@ L.push('   form uses the newer numbering (`MTH 101`, `GST 111`, `MEE 101`, `GET 
 L.push('   document still prints the older numbering for First Year (`MTH 111`, `GSP 101`, `EGR 101`) and uses');
 L.push('   `MEE/EGR/CVE/EEE/GSP` codes throughout Years 2–5. Years 2–5 are reproduced exactly as printed.');
 L.push('4. **First Year, Second Semester: printed list versus handwritten list.** The printed list');
-L.push('   (`MTH 122`, `CHM 112`, `CHM 122`, `PHY 116`, `PHY 124`, `GSP 102`, `ENGR 102`) is not struck out on');
+L.push('   (`MTH 122`, `CHM 112`, `CHM 122`, `PHY 116`, `PHY 124`, `GSP 102`, `EGR 102`) is not struck out on');
 L.push('   the form, but a complete parallel list in the revised numbering is written beside it. The handwritten');
-L.push('   list is treated as the current one; the printed list is retained in the data file under');
-L.push('   `superseded_printed_list` so the decision can be reviewed and reversed.');
-L.push('5. **`GSP 111` (The Use of Library and Study Skills, 2 units) is struck out with no replacement.** It is');
-L.push('   recorded under `removed_from_earlier_revision` and does not appear in the calculator.');
+L.push('   list is treated as the current one, and the printed list is carried as the `pre-ccmas` cohort for the');
+L.push('   students still in the system who sat it.');
+L.push('5. **`GSP 111` (The Use of Library and Study Skills, 2 units) is struck out on the form with no');
+L.push('   replacement.** It is not part of the current First Year, and appears only in the `pre-ccmas` cohort.');
+L.push('7. **`EGR 101` / `EGR 102` versus `ENGR 101` / `ENGR 102`.** Page 25 prints `EGR`; the handwritten form');
+L.push('   writes `ENGR`. The printed spelling is used for the cohort courses, since page 25 is their source.');
 L.push('6. **Fifth Year electives are option areas, not a free pool.** Option A (Thermal and Fluids) and Option B');
 L.push('   (Design, Materials and Manufacturing) are alternatives: a student chooses two courses (6 units) in the');
 L.push('   first semester and one course (3 units) in the second from *one* option area. Both option areas are');

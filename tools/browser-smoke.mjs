@@ -84,8 +84,13 @@ try {
   await go(APP);
   await waitFor(`document.querySelectorAll('tr[data-id]').length > 0`, 'the course tables to render');
 
-  const rows = await exec(`return document.querySelectorAll('tr[data-id]').length;`);
-  check('the page boots and renders every course', rows === 103, `${rows} rows`);
+  const rows = await exec(`return {
+    total: document.querySelectorAll('tr[data-id]').length,
+    visible: Array.from(document.querySelectorAll('tr[data-id]'))
+      .filter(function (tr) { return !tr.classList.contains('hidden') && tr.offsetParent !== null; }).length
+  };`);
+  check('the page boots showing the 103 current courses, with the 16 pre-CCMAS ones held back',
+    rows.total === 119 && rows.visible === 103, JSON.stringify(rows));
 
   let s = await readSummary();
   check('no boot error is shown', s.bootErrorShown === false);

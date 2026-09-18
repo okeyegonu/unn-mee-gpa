@@ -45,8 +45,13 @@ try {
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  const rows = await exec(`return document.querySelectorAll('tr[data-id]').length;`);
-  check('the whole curriculum renders with no server and no network', rows === 103, `${rows} rows`);
+  const rows = await exec(`return {
+    total: document.querySelectorAll('tr[data-id]').length,
+    visible: Array.from(document.querySelectorAll('tr[data-id]'))
+      .filter(function (tr) { return !tr.classList.contains('hidden') && tr.offsetParent !== null; }).length
+  };`);
+  check('the whole curriculum renders with no server and no network',
+    rows.total === 119 && rows.visible === 103, JSON.stringify(rows));
   check('no boot error', (await exec(`return document.getElementById('boot-error').hidden;`)) === true);
   check('the page made no external requests',
     (await exec(`return performance.getEntriesByType('resource').filter(function(r){return !r.name.startsWith('file:');}).length;`)) === 0);

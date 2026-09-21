@@ -145,8 +145,8 @@
             <label class="field"><span>Surname</span>
               <input type="text" id="t-surname" maxlength="40" pattern="[^0-9]*" required></label>
             <label class="field"><span>Reg. No.</span>
-              <input type="text" id="t-regno" placeholder="2021/242857" maxlength="12"
-                     pattern="\d{4}/\d{6,7}" title="A four-digit year, a slash, then six or seven digits."
+              <input type="text" id="t-regno" placeholder="2021/242857" maxlength="14"
+                     pattern="\d{4}/\d{2,9}" title="A four-digit year, a slash, then two to nine digits."
                      inputmode="numeric" required></label>
             <label class="field narrow"><span>Year of Study</span>
               <select id="t-year"></select></label>
@@ -157,7 +157,9 @@
                 <option value="Female">Female</option>
               </select></label>
             <label class="field narrow"><span>Session</span>
-              <select id="t-session"></select></label>
+              <input type="text" id="t-session" placeholder="2023/2024" maxlength="9"
+                     inputmode="numeric" autocomplete="off"
+                     title="Write the session in full years, as 2023/2024." required></label>
           </div>
         </fieldset>
 

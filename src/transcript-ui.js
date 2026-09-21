@@ -13,7 +13,7 @@
 
 import {
   GENDERS, HOD_SALUTATIONS_1, HOD_SALUTATIONS_2, HOD_SALUTATION_2_APPLIES_TO,
-  yearOfStudyOptions, formatHod, formatSession,
+  yearOfStudyOptions, formatHod, parseSession,
   transcriptProblems, prerequisiteCheck, buildTranscript,
 } from './transcript.js';
 import { attemptsOf, evaluateCourse } from './gpa-engine.js';
@@ -89,15 +89,6 @@ export function initTranscript(opts) {
     }
     if (keep) els.year.value = keep;
 
-    // Sessions: this academic year and the nine before it. A session opens in
-    // the year named, so before about September the current session is the
-    // previous calendar year's.
-    const now = new Date();
-    const currentOpening = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-    els.session.innerHTML = '';
-    for (let y = currentOpening; y > currentOpening - 10; y--) {
-      els.session.append(new Option(formatSession(y), String(y)));
-    }
 
     els.sal1.innerHTML = '';
     for (const s of HOD_SALUTATIONS_1) els.sal1.append(new Option(s, s));
@@ -361,7 +352,7 @@ export function initTranscript(opts) {
     const student = readStudent();
     const hod = readHod();
     const year = Number(els.year.value);
-    const session = Number(els.session.value);
+    const session = parseSession(els.session.value).year;
     const firstSemester = ticked(1);
     const secondSemester = ticked(2);
 

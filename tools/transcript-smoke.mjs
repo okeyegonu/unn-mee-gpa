@@ -67,6 +67,7 @@ const gradeYears = (years, grade) => exec(`
 `);
 
 const fillForm = () => exec(`
+  document.getElementById('t-session').value = '2023/2024';
   document.getElementById('t-first').value = 'Ifeoma';
   document.getElementById('t-middle').value = 'Blessing';
   document.getElementById('t-surname').value = 'Okechukwu';
@@ -127,7 +128,7 @@ try {
     years: Array.from(document.getElementById('t-year').options).map(function (o) { return o.text; }),
     genders: Array.from(document.getElementById('t-gender').options).map(function (o) { return o.text; }),
     genderLabel: document.getElementById('t-gender').closest('label').querySelector('span').textContent.trim(),
-    sessions: Array.from(document.getElementById('t-session').options).slice(0, 3).map(function (o) { return o.text; }),
+    sessionIsTyped: document.getElementById('t-session').tagName === 'INPUT',
     sal1: Array.from(document.getElementById('t-sal1').options).map(function (o) { return o.text; }),
     sal2: Array.from(document.getElementById('t-sal2').options).map(function (o) { return o.text; }),
     sal2Hidden: document.getElementById('t-sal2-field').hidden
@@ -137,8 +138,8 @@ try {
   check('the label reads Gender, not Sex', fields.genderLabel === 'Gender', fields.genderLabel);
   check('Gender offers Male and Female',
     fields.genders.join(',') === '—,Male,Female', fields.genders.join(','));
-  check('sessions are written in full years',
-    fields.sessions.every((t) => /^\d{4}\/\d{4}$/.test(t)), fields.sessions.join(', '));
+  check('the session is typed by hand, not chosen from a list',
+    fields.sessionIsTyped === true);
   check('the Head of Department titles are offered',
     fields.sal1.join(',') === 'Engr.,Prof.,Dr.,Mr.' && fields.sal2.join(',') === 'Prof.,Dr.,Mr.',
     `${fields.sal1.join(',')} | ${fields.sal2.join(',')}`);

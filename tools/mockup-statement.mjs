@@ -154,7 +154,8 @@ try {
   await settle(400);
   const details = KIND === 'mee'
     ? { first: 'Ifeoma', middle: 'Blessing', surname: 'Okechukwu', gender: 'Female', year: '3', reg: '2021/242857' }
-    : { first: 'Chidi', middle: 'Emeka', surname: 'Nwosu', gender: 'Male', year: '2', reg: '2022/198443' };
+    // The university-wide dropdown carries the programme length with the year.
+    : { first: 'Chidi', middle: 'Emeka', surname: 'Nwosu', gender: 'Male', year: '2/7', reg: '2022/198443' };
   await exec(`
     document.getElementById('t-first').value = ${JSON.stringify(details.first)};
     document.getElementById('t-middle').value = ${JSON.stringify(details.middle)};
@@ -170,9 +171,9 @@ try {
     document.getElementById('t-hod-surname').dispatchEvent(new Event('input', { bubbles: true }));
     var y = document.getElementById('t-year');
     y.value = ${JSON.stringify(details.year)};
+    if (!y.value) y.value = y.options[0].value;
     y.dispatchEvent(new Event('change', { bubbles: true }));
-    var ses = document.getElementById('t-session');
-    for (var i = 0; i < ses.options.length; i++) if (ses.options[i].text === '2023/2024') ses.value = ses.options[i].value;
+    document.getElementById('t-session').value = '2023/2024';
   `);
   await settle(400);
   if (KIND !== 'mee') {

@@ -11,8 +11,8 @@ import { dirname, resolve } from 'node:path';
 import {
   LETTERHEAD_RESERVE_MM,
   formatFullName, formatShortName, nameProblems,
-  normaliseRegNo, regNoProblem, REG_NO_PATTERN,
-  formatSession, sessionProblem,
+  normaliseRegNo, regNoProblem, REG_NO_PATTERN, REG_NO_MIN_DIGITS, REG_NO_MAX_DIGITS,
+  formatSession, sessionProblem, parseSession,
   yearOfStudyOptions, formatYearOfStudy,
   GENDERS, genderProblem,
   HOD_SALUTATIONS_1, HOD_SALUTATIONS_2, formatHod, hodProblems,
@@ -71,12 +71,21 @@ test('a name must be given, and cannot contain numbers', () => {
 
 /* ------------------------------------------------------ registration number */
 
-test('a registration number is a year, a slash and six or seven digits', () => {
-  for (const good of ['2021/242857', '2019/1234567', '2024/000001']) {
+test('a registration number is a four-digit year, a slash and 2 to 9 digits', () => {
+  assert.equal(REG_NO_MIN_DIGITS, 2);
+  assert.equal(REG_NO_MAX_DIGITS, 9);
+
+  // Today's numbers carry six or seven numerals; the range allows for growth.
+  for (const good of ['2021/242857', '2019/1234567', '2024/000001', '2024/12', '2024/123456789']) {
     assert.equal(regNoProblem(good), null, good);
     assert.ok(REG_NO_PATTERN.test(good));
   }
-  for (const bad of ['2021/24285', '2021/12345678', '21/242857', '2021-242857', '2021/abcdef', '242857', '']) {
+  // Every serial length from two to nine is accepted.
+  for (let n = REG_NO_MIN_DIGITS; n <= REG_NO_MAX_DIGITS; n++) {
+    assert.equal(regNoProblem(`2024/${'1'.repeat(n)}`), null, `${n} digits`);
+  }
+  for (const bad of ['2024/1', '2024/1234567890', '21/242857', '20211/242857',
+                     '2021-242857', '2021/abcdef', '2021/24285A', '242857', '']) {
     assert.ok(regNoProblem(bad), `${bad} should be refused`);
   }
 });
@@ -106,9 +115,37 @@ test('a session that spans the century still reads in full', () => {
 });
 
 test('a nonsensical session is refused', () => {
-  for (const bad of ['', null, 'abc', 1200, 2500, 20.5]) {
+  for (const bad of ['', null, 'abc', '1200', '2500', 'twenty']) {
     assert.ok(sessionProblem(bad), String(bad));
   }
+});
+
+test('the session is typed, and either shape is accepted', () => {
+  // The opening year alone, or the session written out in full.
+  assert.deepEqual(parseSession('2023'), { year: 2023, problem: null });
+  assert.deepEqual(parseSession('2023/2024'), { year: 2023, problem: null });
+  assert.deepEqual(parseSession('  2023 / 2024  '), { year: 2023, problem: null },
+    'spacing is of no consequence');
+  assert.equal(formatSession(parseSession('2023/2024').year), '2023/2024');
+});
+
+test('an abbreviated session is refused, and the full form suggested', () => {
+  const r = parseSession('2023/24');
+  assert.equal(r.year, null);
+  assert.match(r.problem, /written in full years/i);
+  assert.match(r.problem, /2023\/2024/, 'and it says what to write instead');
+});
+
+test('two years that are not consecutive are refused', () => {
+  const r = parseSession('2023/2025');
+  assert.equal(r.year, null);
+  assert.match(r.problem, /consecutive/i);
+  assert.match(r.problem, /2024/);
+});
+
+test('a session outside living memory is refused', () => {
+  assert.match(parseSession('1850').problem, /opening year/i);
+  assert.match(parseSession('2500/2501').problem, /opening year/i);
 });
 
 /* ------------------------------------------------------------ year of study */

@@ -231,7 +231,8 @@ that also ships as one offline file.
 
 **The form** collects the student's first, middle and surname — printed as
 `SURNAME, Firstname Middlename` — a registration number validated as a
-four-digit year, a slash and six or seven digits, the year of study, the gender
+four-digit year, a slash and between two and nine digits — wide enough that a
+lengthening serial will not turn a student away, the year of study, the gender
 and the session. The Head of Department is entered too, since the office changes
 hands: a title, an optional second title where the first is `Engr.`, up to three
 initials and a surname, printed as `Engr. Dr. M. N. Eke`.

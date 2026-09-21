@@ -14,6 +14,7 @@
     "smoke:offline": "node tools/file-url-smoke.mjs",
     "smoke:repeats": "node tools/repeat-smoke.mjs",
     "smoke:cohort": "node tools/cohort-smoke.mjs",
-    "smoke:transcript": "node tools/transcript-smoke.mjs"
+    "smoke:transcript": "node tools/transcript-smoke.mjs",
+    "mockup": "node tools/mockup-statement.mjs"
   }
 }

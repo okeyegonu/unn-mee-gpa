@@ -122,6 +122,15 @@ test('the year of study denominator is the programme length, never the year', ()
   assert.equal(formatYearOfStudy(4, 5), '4/5');
 });
 
+test('the range follows the programme, so a long one is not cut off', () => {
+  // Medicine: seven years to graduate, ten allowed.
+  assert.deepEqual(yearOfStudyOptions(7, 10).map((o) => o.label),
+    ['1/7', '2/7', '3/7', '4/7', '5/7', '6/7', '7/7', '8/7', '9/7', '10/7']);
+  assert.equal(formatYearOfStudy(9, 7), '9/7');
+  // This Department: five years, eight allowed, exactly as the statement reads.
+  assert.equal(yearOfStudyOptions(5, 8).length, 8);
+});
+
 test('a four-year programme reads 1/4 to 8/4', () => {
   assert.deepEqual(yearOfStudyOptions(4).map((o) => o.label),
     ['1/4', '2/4', '3/4', '4/4', '5/4', '6/4', '7/4', '8/4']);

@@ -444,6 +444,8 @@ function wireTranscriptOrThrow() {
     getState: () => state,
     getCourses: () => courses,
     programmeYears: doc.years.length,
+    // Five years to graduate, eight at most, so the year of study reaches 8/5.
+    maxYearOfStudy: doc.progression?.maximum_years_to_graduate ?? 8,
     requiredCoursesForYear,
     prefs,
     institution: doc.institution,

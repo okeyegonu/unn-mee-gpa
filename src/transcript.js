@@ -220,6 +220,10 @@ export function buildTranscript({
   student, hod, session, yearOfStudy, programmeYears,
   firstSemester = [], secondSemester = [],
   cumulativeCourses = [], state, decimals = 2,
+  // The departmental statement sets course titles in capitals. Where the
+  // student wrote the title themselves it is printed exactly as they wrote it,
+  // because it is their record of their own course.
+  uppercaseTitles = true,
 }) {
   const rowsFor = (courses) => courses.map((course) => {
     const ev = evaluateCourse(course, state);
@@ -227,7 +231,7 @@ export function buildTranscript({
     return {
       id: course.id,
       code: course.code,
-      title: (course.title ?? '').toUpperCase(),
+      title: uppercaseTitles ? (course.title ?? '').toUpperCase() : (course.title ?? ''),
       units: ev.baseUnits,
       // A course sat more than once shows every sitting, oldest first.
       grade: sittings.join(' / '),

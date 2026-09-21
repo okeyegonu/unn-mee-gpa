@@ -452,7 +452,10 @@ td.cell-units .sub {
 }
 .sheet .sheet-semester h3 { font-style: italic; font-weight: 700; font-size: 11.5pt; margin: 0 0 2.5mm; }
 .sheet table.results { width: 100%; border-collapse: collapse; }
-.sheet table.results td { padding: 0 0 1.05mm; vertical-align: top; }
+/* 4.6 mm per row, the pitch measured from the reference statement. At 11.5pt
+   that is a line-height of 1.134 with no padding, and it is what lets a full
+   session — twenty courses and more — sit on one page. */
+.sheet table.results td { padding: 0; line-height: 1.134; vertical-align: top; }
 .sheet td.r-code  { width: 36mm; white-space: nowrap; }
 .sheet td.r-title { width: 106mm; }
 .sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }

@@ -51,6 +51,7 @@ npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
 npm run smoke:repeats# end-to-end checks for repeat sittings
 npm run smoke:transcript # end-to-end checks for the PDF statement
+npm run mockup <url> <out.pdf> mee   # print a specimen statement to a real PDF
 npm run smoke:cohort # end-to-end checks for the pre-CCMAS first year
 npm run smoke:mobile # the same at three phone viewports
 npm run smoke:offline# test the single-file build opened from file://
@@ -248,6 +249,11 @@ everything unticked.
 **The figures.** The GPA is the session's; the **CGPA is cumulative**, covering
 every result entered for that year and the years before it.
 
+**One session to a page.** Course rows are set at the 4.6 mm pitch measured from
+the reference, which is what lets a full twenty-course session sit on a single
+sheet. `npm run mockup` prints a specimen statement to a real PDF through the
+browser, for checking the layout against the departmental original.
+
 **The prerequisite.** A statement cannot be produced until every earlier year is
 complete, because a cumulative figure with results missing is misleading. The
 block names each incomplete year and the courses still missing. Electives are
@@ -328,6 +334,7 @@ gpa-calculator/
 │   ├── browser-smoke.mjs           end-to-end test in real Firefox
 │   ├── repeat-smoke.mjs            end-to-end checks for repeat sittings
 │   ├── transcript-smoke.mjs        end-to-end checks for the PDF statement
+│   ├── mockup-statement.mjs        prints a specimen statement to a real PDF
 │   ├── cohort-smoke.mjs            end-to-end checks for the pre-CCMAS first year
 │   ├── mobile-smoke.mjs            phone-viewport layout checks
 │   └── file-url-smoke.mjs          offline-copy checks

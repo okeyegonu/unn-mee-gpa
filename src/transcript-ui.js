@@ -64,11 +64,30 @@ export function initTranscript(opts) {
   restoreDetails();
   wire();
 
+  /** The programme length may be fixed, or read fresh when it can change. */
+  function programmeYears() {
+    return typeof opts.programmeYears === 'function' ? opts.programmeYears() : opts.programmeYears;
+  }
+
+  /**
+   * How far the year of study may run. A five-year programme with eight years
+   * allowed reaches 8/5; a seven-year programme such as Medicine, with ten
+   * allowed, reaches 10/7. Tying this to eight would cut such a student off.
+   */
+  function maxYearOfStudy() {
+    const raw = typeof opts.maxYearOfStudy === 'function' ? opts.maxYearOfStudy() : opts.maxYearOfStudy;
+    const n = Number(raw);
+    if (Number.isInteger(n) && n >= 1) return Math.min(15, n);
+    return Math.max(8, Number(programmeYears()) || 0);
+  }
+
   function fillSelects() {
+    const keep = els.year.value;
     els.year.innerHTML = '';
-    for (const o of yearOfStudyOptions(opts.programmeYears)) {
+    for (const o of yearOfStudyOptions(programmeYears(), maxYearOfStudy())) {
       els.year.append(new Option(o.label, String(o.value)));
     }
+    if (keep) els.year.value = keep;
 
     // Sessions: this academic year and the nine before it. A session opens in
     // the year named, so before about September the current session is the
@@ -370,8 +389,9 @@ export function initTranscript(opts) {
     const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
 
     const t = buildTranscript({
-      student, hod, session, yearOfStudy: year, programmeYears: opts.programmeYears,
+      student, hod, session, yearOfStudy: year, programmeYears: programmeYears(),
       firstSemester, secondSemester, cumulativeCourses, state,
+      uppercaseTitles: opts.uppercaseTitles !== false,
     });
 
     rememberDetails();

@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-21T16:49:51.508Z by tools/build-single-file.mjs.
+  Built 2026-09-21T16:57:58.702Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -473,7 +473,10 @@ td.cell-units .sub {
 }
 .sheet .sheet-semester h3 { font-style: italic; font-weight: 700; font-size: 11.5pt; margin: 0 0 2.5mm; }
 .sheet table.results { width: 100%; border-collapse: collapse; }
-.sheet table.results td { padding: 0 0 1.05mm; vertical-align: top; }
+/* 4.6 mm per row, the pitch measured from the reference statement. At 11.5pt
+   that is a line-height of 1.134 with no padding, and it is what lets a full
+   session — twenty courses and more — sit on one page. */
+.sheet table.results td { padding: 0; line-height: 1.134; vertical-align: top; }
 .sheet td.r-code  { width: 36mm; white-space: nowrap; }
 .sheet td.r-title { width: 106mm; }
 .sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }
@@ -1692,6 +1695,10 @@ function buildTranscript({
   student, hod, session, yearOfStudy, programmeYears,
   firstSemester = [], secondSemester = [],
   cumulativeCourses = [], state, decimals = 2,
+  // The departmental statement sets course titles in capitals. Where the
+  // student wrote the title themselves it is printed exactly as they wrote it,
+  // because it is their record of their own course.
+  uppercaseTitles = true,
 }) {
   const rowsFor = (courses) => courses.map((course) => {
     const ev = evaluateCourse(course, state);
@@ -1699,7 +1706,7 @@ function buildTranscript({
     return {
       id: course.id,
       code: course.code,
-      title: (course.title ?? '').toUpperCase(),
+      title: uppercaseTitles ? (course.title ?? '').toUpperCase() : (course.title ?? ''),
       units: ev.baseUnits,
       // A course sat more than once shows every sitting, oldest first.
       grade: sittings.join(' / '),
@@ -2090,11 +2097,30 @@ function initTranscript(opts) {
   restoreDetails();
   wire();
 
+  /** The programme length may be fixed, or read fresh when it can change. */
+  function programmeYears() {
+    return typeof opts.programmeYears === 'function' ? opts.programmeYears() : opts.programmeYears;
+  }
+
+  /**
+   * How far the year of study may run. A five-year programme with eight years
+   * allowed reaches 8/5; a seven-year programme such as Medicine, with ten
+   * allowed, reaches 10/7. Tying this to eight would cut such a student off.
+   */
+  function maxYearOfStudy() {
+    const raw = typeof opts.maxYearOfStudy === 'function' ? opts.maxYearOfStudy() : opts.maxYearOfStudy;
+    const n = Number(raw);
+    if (Number.isInteger(n) && n >= 1) return Math.min(15, n);
+    return Math.max(8, Number(programmeYears()) || 0);
+  }
+
   function fillSelects() {
+    const keep = els.year.value;
     els.year.innerHTML = '';
-    for (const o of yearOfStudyOptions(opts.programmeYears)) {
+    for (const o of yearOfStudyOptions(programmeYears(), maxYearOfStudy())) {
       els.year.append(new Option(o.label, String(o.value)));
     }
+    if (keep) els.year.value = keep;
 
     // Sessions: this academic year and the nine before it. A session opens in
     // the year named, so before about September the current session is the
@@ -2396,8 +2422,9 @@ function initTranscript(opts) {
     const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
 
     const t = buildTranscript({
-      student, hod, session, yearOfStudy: year, programmeYears: opts.programmeYears,
+      student, hod, session, yearOfStudy: year, programmeYears: programmeYears(),
       firstSemester, secondSemester, cumulativeCourses, state,
+      uppercaseTitles: opts.uppercaseTitles !== false,
     });
 
     rememberDetails();
@@ -2855,6 +2882,8 @@ function wireTranscriptOrThrow() {
     getState: () => state,
     getCourses: () => courses,
     programmeYears: doc.years.length,
+    // Five years to graduate, eight at most, so the year of study reaches 8/5.
+    maxYearOfStudy: doc.progression?.maximum_years_to_graduate ?? 8,
     requiredCoursesForYear,
     prefs,
     institution: doc.institution,

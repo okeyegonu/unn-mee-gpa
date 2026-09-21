@@ -45,11 +45,12 @@ offline, and is what you send to students over WhatsApp. See
 ### Everything you can run
 
 ```bash
-npm test             # 125 calculation, repeat, cohort, persistence, preference and curriculum tests
+npm test             # 153 calculation, repeat, cohort, statement, persistence and curriculum tests
 npm run validate     # re-validate the curriculum; rewrites the validation report
 npm run build        # rebuild the single-file offline copy
 npm run smoke        # end-to-end test in a real Firefox  (needs geckodriver)
 npm run smoke:repeats# end-to-end checks for repeat sittings
+npm run smoke:transcript # end-to-end checks for the PDF statement
 npm run smoke:cohort # end-to-end checks for the pre-CCMAS first year
 npm run smoke:mobile # the same at three phone viewports
 npm run smoke:offline# test the single-file build opened from file://
@@ -210,7 +211,54 @@ reading the same record still finds the first sitting where it expects it.
 Clearing the first sitting clears the whole course, since a repeat of a course
 that was never sat is meaningless.
 
-### Reporting precision
+### PDF statement of result
+
+Alongside the JSON export — which is unchanged — an **Export as PDF** button
+produces a sessional statement of result laid out like the departmental one.
+
+The top **62.7 mm of the page is left blank** so the sheet can be printed on
+pre-printed University letterhead. That figure is measured, not estimated: the
+reference statement was rendered at 150 dpi and its letterhead's ink ends at
+50.5 mm, with the "To:" line beginning at 62.7 mm. A test asserts the rendered
+padding, and the preview tints the band so the student can see it is meant to
+be empty.
+
+The statement is produced through the browser's own print dialogue rather than
+by a PDF library. Printing onto headed paper is the primary use, "Save as PDF"
+is the same dialogue, and it keeps a 350 kB dependency out of an application
+that also ships as one offline file.
+
+**The form** collects the student's first, middle and surname — printed as
+`SURNAME, Firstname Middlename` — a registration number validated as a
+four-digit year, a slash and six or seven digits, the year of study, the gender
+and the session. The Head of Department is entered too, since the office changes
+hands: a title, an optional second title where the first is `Engr.`, up to three
+initials and a surname, printed as `Engr. Dr. M. N. Eke`.
+
+Three details follow the Department's usage rather than the reference sheet,
+which has them wrong: the year of study reads `3/5` — the denominator is the
+length of the programme, never the year reached, so `4/4` never appears for a
+five-year programme; the field is labelled **Gender**, not Sex; and a session is
+written `2023/2024`, never `2023/24`.
+
+**Courses are ticked, never assumed.** The picker lists only courses already
+graded, grouped by semester and opening on the year being reported, with
+everything unticked.
+
+**The figures.** The GPA is the session's; the **CGPA is cumulative**, covering
+every result entered for that year and the years before it.
+
+**The prerequisite.** A statement cannot be produced until every earlier year is
+complete, because a cumulative figure with results missing is misleading. The
+block names each incomplete year and the courses still missing. Electives are
+not required — a student takes two of fourteen — and a student who sat the
+pre-CCMAS First Year is held to that list rather than the current one.
+
+The typed details are remembered for next time. They are kept with the display
+preferences, never with the results, never in an export, and they never leave
+the browser.
+
+## Reporting precision
 
 GPA figures are shown to two decimal places, which is what the university
 reports. A **Show full precision** checkbox in the toolbar switches every GPA on
@@ -263,6 +311,8 @@ gpa-calculator/
 │   ├── grading.js                  the grade scale and the course-point rule
 │   ├── curriculum.js               flattening, indexing, structural validation
 │   ├── gpa-engine.js               the GPA calculation — pure, no DOM, no storage
+│   ├── transcript.js               the statement of result: formatting, rules, figures
+│   ├── transcript-ui.js            the statement form, preview and printing
 │   ├── storage.js                  persistence behind an async repository interface
 │   ├── ui.js                       presentation only
 │   └── styles.css                  desktop layout + phone card layout
@@ -277,6 +327,7 @@ gpa-calculator/
 │   ├── build-single-file.mjs       the offline single-file build
 │   ├── browser-smoke.mjs           end-to-end test in real Firefox
 │   ├── repeat-smoke.mjs            end-to-end checks for repeat sittings
+│   ├── transcript-smoke.mjs        end-to-end checks for the PDF statement
 │   ├── cohort-smoke.mjs            end-to-end checks for the pre-CCMAS first year
 │   ├── mobile-smoke.mjs            phone-viewport layout checks
 │   └── file-url-smoke.mjs          offline-copy checks

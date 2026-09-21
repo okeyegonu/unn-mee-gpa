@@ -25,6 +25,7 @@
     </div>
     <div class="actions">
       <button type="button" id="btn-export">Export results</button>
+      <button type="button" id="btn-pdf">Export as PDF</button>
       <button type="button" id="btn-import">Import results</button>
       <button type="button" id="btn-reset" class="danger">Reset results</button>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
@@ -117,6 +118,106 @@
 
   <footer class="colophon" id="colophon"></footer>
 </main>
+
+<!-- Sessional statement of result: the form, then the sheet that is printed. -->
+<div class="overlay" id="pdf-overlay" hidden>
+  <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="pdf-title">
+    <header class="overlay-head">
+      <h2 id="pdf-title">Sessional Statement of Result</h2>
+      <button type="button" class="overlay-close" id="pdf-close" aria-label="Close">&times;</button>
+    </header>
+
+    <div class="overlay-body">
+      <p class="hint">
+        This produces a statement laid out like the departmental sessional statement, with the top of the
+        page left blank so it can be printed on pre-printed University letterhead. Your browser's print
+        dialog will open; choose <strong>Save as PDF</strong>, or print it straight onto headed paper.
+      </p>
+
+      <form id="pdf-form" autocomplete="off">
+        <fieldset>
+          <legend>Your details</legend>
+          <div class="field-grid">
+            <label class="field"><span>First name</span>
+              <input type="text" id="t-first" maxlength="40" pattern="[^0-9]*" required></label>
+            <label class="field"><span>Middle name</span>
+              <input type="text" id="t-middle" maxlength="40" pattern="[^0-9]*"></label>
+            <label class="field"><span>Surname</span>
+              <input type="text" id="t-surname" maxlength="40" pattern="[^0-9]*" required></label>
+            <label class="field"><span>Reg. No.</span>
+              <input type="text" id="t-regno" placeholder="2021/242857" maxlength="12"
+                     pattern="\d{4}/\d{6,7}" title="A four-digit year, a slash, then six or seven digits."
+                     inputmode="numeric" required></label>
+            <label class="field narrow"><span>Year of Study</span>
+              <select id="t-year"></select></label>
+            <label class="field narrow"><span>Gender</span>
+              <select id="t-gender">
+                <option value="">—</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select></label>
+            <label class="field narrow"><span>Session</span>
+              <select id="t-session"></select></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Head of Department</legend>
+          <p class="hint">Entered here because the office changes hands.</p>
+          <div class="field-grid">
+            <label class="field narrow"><span>Title</span>
+              <select id="t-sal1"></select></label>
+            <label class="field narrow" id="t-sal2-field"><span>Second title</span>
+              <select id="t-sal2"></select></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init1" maxlength="2" placeholder="M"></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init2" maxlength="2" placeholder="N"></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init3" maxlength="2"></label>
+            <label class="field"><span>Surname</span>
+              <input type="text" id="t-hod-surname" maxlength="40" pattern="[^0-9]*" placeholder="Eke"></label>
+          </div>
+          <p class="hint" id="t-hod-preview"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Courses taken in this session</legend>
+          <p class="hint">
+            Tick the courses you sat in each semester of this session. Nothing is ticked for you.
+            Only courses you have already graded can appear on a statement.
+          </p>
+          <div id="t-courses"></div>
+        </fieldset>
+
+        <div id="t-messages" class="form-messages" hidden></div>
+
+        <div class="form-actions">
+          <button type="submit" id="t-submit">Produce statement</button>
+          <button type="button" class="secondary" id="t-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="preview-overlay" hidden>
+  <div class="overlay-panel preview-panel" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <header class="overlay-head">
+      <h2 id="preview-title">Your statement</h2>
+      <button type="button" class="overlay-close" id="preview-close" aria-label="Close">&times;</button>
+    </header>
+    <div class="preview-bar">
+      <button type="button" id="preview-print">Print / Save as PDF</button>
+      <button type="button" class="secondary" id="preview-back">Back to the form</button>
+      <span class="hint">
+        The blank band at the top is left for the pre-printed University letterhead.
+        In the print dialogue choose <strong>Save as PDF</strong>, or print onto headed paper.
+      </span>
+    </div>
+    <div class="preview-scroll"><div id="print-root"></div></div>
+  </div>
+</div>
 
 <script type="module" src="./src/ui.js"></script>
 </body>

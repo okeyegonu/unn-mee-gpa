@@ -40,6 +40,10 @@ const exec = (s, a = []) => call('POST', `/session/${sid}/execute/sync`, { scrip
 
 try {
   await call('POST', `/session/${sid}/url`, { url: FILE });
+  // Start from a clean slate: every run of this file shares one file:// origin,
+  // so anything an earlier run left behind would still be here.
+  await exec(`try { localStorage.clear(); } catch (e) {}`);
+  await call('POST', `/session/${sid}/url`, { url: FILE });
   for (let i = 0; i < 100; i++) {
     if (await exec(`return document.querySelectorAll('tr[data-id]').length > 0;`)) break;
     await new Promise((r) => setTimeout(r, 100));

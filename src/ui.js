@@ -14,6 +14,7 @@ import {
   setAttempt, canonicaliseState, attemptsOf,
 } from './gpa-engine.js';
 import { ResultsRepository, PreferencesStore } from './storage.js';
+import { initTranscript } from './transcript-ui.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -114,6 +115,7 @@ async function boot() {
   buildYearNav();
   buildTables();
   wireGlobalControls();
+  wireTranscript();
   refreshAll();
   els.saveState.textContent = loaded.found
     ? `Loaded saved results${loaded.savedAt ? ` (saved ${formatWhen(loaded.savedAt)})` : ''}`
@@ -399,6 +401,53 @@ function wireGlobalControls() {
     syncControlsFromState();
     refreshAll();
     els.saveState.textContent = 'All results cleared';
+  });
+}
+
+/**
+ * Which courses must already be graded before a statement may be produced for a
+ * later year.
+ *
+ * Electives are excluded: a student takes two of fourteen, so requiring all of
+ * them would block everybody. The pre-CCMAS First Year is required in place of
+ * the current one for a student who has graded any of it, since a student sat
+ * one list or the other, never both.
+ */
+function requiredCoursesForYear(year, currentState, allCourses) {
+  const usesCohort = year === 1 && allCourses.some(
+    (c) => c.cohortId === 'pre-ccmas' && currentState?.grades?.[c.id],
+  );
+  return allCourses.filter((c) => {
+    if (c.year !== year) return false;
+    if (c.groupType === 'elective') return false;
+    return usesCohort ? c.cohortId === 'pre-ccmas' : c.cohortId === null;
+  });
+}
+
+function wireTranscript() {
+  // The statement is an extra. If anything about it fails, the calculator
+  // itself must still come up.
+  try {
+    wireTranscriptOrThrow();
+  } catch (err) {
+    const btn = document.getElementById('btn-pdf');
+    if (btn) {
+      btn.disabled = true;
+      btn.title = `The PDF statement is unavailable: ${err.message}`;
+    }
+    console.error('Statement unavailable:', err);
+  }
+}
+
+function wireTranscriptOrThrow() {
+  initTranscript({
+    getState: () => state,
+    getCourses: () => courses,
+    programmeYears: doc.years.length,
+    requiredCoursesForYear,
+    prefs,
+    institution: doc.institution,
+    department: doc.department,
   });
 }
 

@@ -348,3 +348,172 @@ td.cell-units .sub {
   .actions button { min-height: 44px; }
   .yearnav a { min-height: 38px; }
 }
+
+/* ================================================================
+   Sessional statement of result — the form overlay
+   ================================================================ */
+
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(16, 20, 26, .55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.overlay[hidden] { display: none; }
+.overlay-panel {
+  background: var(--paper); border-radius: var(--radius); width: 100%; max-width: 760px;
+  box-shadow: 0 12px 40px rgba(16, 20, 26, .3); overflow: hidden;
+}
+.overlay-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px; background: var(--ink); color: #fff;
+}
+.overlay-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.overlay-close {
+  background: none; border: none; color: #cbd2da; font-size: 26px; line-height: 1;
+  cursor: pointer; padding: 0 6px; border-radius: 4px; min-height: 40px; min-width: 40px;
+}
+.overlay-close:hover { color: #fff; background: #333a42; }
+.overlay-body { padding: 16px 18px 20px; }
+
+.overlay-body fieldset {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 12px 14px 14px; margin: 0 0 14px;
+}
+.overlay-body legend {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-soft); padding: 0 6px; font-weight: 600;
+}
+.overlay-body .field-grid input,
+.overlay-body .field-grid select { min-height: 42px; }
+.form-actions button.secondary {
+  background: #fff; color: var(--ink-soft); border-color: var(--rule);
+}
+.form-actions button.secondary:hover { background: var(--ground); color: var(--ink); }
+
+/* the course-ticking list */
+.pick-semester { margin-bottom: 12px; }
+.pick-semester > h4 {
+  margin: 0 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ink-soft);
+}
+.pick-list { border: 1px solid var(--rule-soft); border-radius: 6px; max-height: 240px; overflow-y: auto; }
+.pick-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-bottom: 1px solid var(--rule-soft); font-size: 13.5px;
+}
+.pick-row:last-child { border-bottom: none; }
+.pick-row input { width: 20px; height: 20px; flex: none; }
+.pick-row .pick-code { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+.pick-row .pick-title { color: var(--ink-soft); flex: 1; }
+.pick-row .pick-year { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+.pick-row .pick-grade {
+  font-family: var(--mono); font-weight: 700; color: var(--accent); white-space: nowrap;
+}
+.pick-row .pick-grade[data-fail="yes"] { color: var(--danger); }
+.pick-empty { padding: 14px; font-size: 13px; color: var(--ink-faint); }
+.pick-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.pick-tools .field { flex: 0 1 220px; }
+.pick-tools select { width: 100%; }
+.pick-row[hidden] { display: none; }
+
+/* ================================================================
+   Sessional statement of result — the printed sheet
+   ================================================================ */
+
+/* The sheet is styled the same on screen and on paper, so that what the
+   student sees in the preview is what comes out of the printer. */
+.sheet {
+  box-sizing: border-box;
+  width: 210mm; min-height: 297mm;
+  background: #fff; color: #000;
+  /* The top of the page is left empty for the pre-printed University
+     letterhead. 62.7 mm is measured from the reference statement: the
+     letterhead's ink ends at 50.5 mm and the "To:" line begins at 62.7 mm. */
+  padding: 62.7mm 20mm 20mm 33mm;
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 11.5pt; line-height: 1.32;
+}
+.sheet .addressee { font-weight: 700; margin: 0 0 7mm; }
+.sheet .statement-title {
+  text-align: center; font-weight: 700; text-decoration: underline;
+  letter-spacing: .02em; margin: 0 0 6mm;
+}
+.sheet .details { margin: 0 0 7mm; display: flex; flex-wrap: wrap; gap: 0 6mm; }
+.sheet .details span { white-space: nowrap; }
+.sheet .details b { font-weight: 700; }
+.sheet .sheet-semester {
+  /* Its own class, not .semester: the calculator styles .semester as a bordered
+     card, and the statement must inherit none of that. */
+  margin: 0 0 6mm; padding: 0; border: none; background: none;
+  page-break-inside: avoid;
+}
+.sheet .sheet-semester h3 { font-style: italic; font-weight: 700; font-size: 11.5pt; margin: 0 0 2.5mm; }
+.sheet table.results { width: 100%; border-collapse: collapse; }
+.sheet table.results td { padding: 0 0 1.05mm; vertical-align: top; }
+.sheet td.r-code  { width: 36mm; white-space: nowrap; }
+.sheet td.r-title { width: 106mm; }
+.sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }
+.sheet .figures { margin-top: 9mm; }
+.sheet .figures div { margin-bottom: 1.5mm; font-weight: 700; }
+.sheet .signature { margin-top: 17mm; }
+.sheet .signature .hod { font-weight: 700; }
+.sheet .signature .role { font-style: italic; font-size: 10pt; }
+
+/* ---------- the preview ---------- */
+.preview-panel { max-width: 900px; }
+.preview-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--rule); background: #fafbfc;
+}
+.preview-bar button {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; min-height: 42px;
+  border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+}
+.preview-bar button.secondary { background: #fff; color: var(--ink-soft); border-color: var(--rule); }
+.preview-bar .hint { margin: 0; flex: 1 1 260px; font-size: 12px; }
+.preview-scroll {
+  background: var(--ground); padding: 16px; overflow: auto; max-height: 72vh;
+}
+.preview-scroll #print-root { width: 210mm; margin: 0 auto; box-shadow: 0 2px 12px rgba(16,20,26,.18); }
+/* The band left for the letterhead is tinted in the preview only, so the
+   student can see it is meant to be empty. It prints white. */
+.preview-scroll .sheet { position: relative; }
+.preview-scroll .sheet::before {
+  content: "reserved for the University letterhead";
+  box-sizing: border-box; pointer-events: none;
+  position: absolute; top: 0; left: 0; right: 0; height: 62.7mm;
+  background: repeating-linear-gradient(135deg, #f4f6f9, #f4f6f9 8px, #eef1f5 8px, #eef1f5 16px);
+  color: var(--ink-faint); font-family: system-ui, sans-serif; font-size: 9pt;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2mm;
+  border-bottom: 1px dashed #cfd6de;
+}
+
+@media print {
+  /* Nothing of the calculator itself is printed. */
+  body > *:not(#preview-overlay) { display: none !important; }
+  #preview-overlay { position: static !important; display: block !important; background: none !important; padding: 0 !important; overflow: visible !important; }
+  #preview-overlay .overlay-head, #preview-overlay .preview-bar { display: none !important; }
+  .overlay-panel { max-width: none !important; box-shadow: none !important; border-radius: 0 !important; }
+  .preview-scroll { background: none !important; padding: 0 !important; overflow: visible !important; max-height: none !important; }
+  .preview-scroll #print-root { box-shadow: none !important; width: auto !important; margin: 0 !important; }
+  .preview-scroll .sheet::before { display: none !important; }
+
+  @page { size: A4 portrait; margin: 0; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .sheet { page-break-after: always; box-shadow: none; }
+  .sheet:last-child { page-break-after: auto; }
+}
+
+@media (max-width: 760px) {
+  .overlay { padding: 0; }
+  .overlay-panel { max-width: none; border-radius: 0; min-height: 100%; }
+  .overlay-body { padding: 14px 12px 24px; }
+  .overlay-body .field-grid .field,
+  .overlay-body .field-grid .field.narrow,
+  .overlay-body .field-grid .field.tiny { flex: 1 1 100%; }
+  .overlay-body .field-grid .field.tiny { flex: 0 1 30%; }
+  .pick-list { max-height: 45vh; }
+}

@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-18T10:45:01.436Z by tools/build-single-file.mjs.
+  Built 2026-09-21T16:49:51.508Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -370,6 +370,175 @@ td.cell-units .sub {
   .yearnav a { min-height: 38px; }
 }
 
+/* ================================================================
+   Sessional statement of result — the form overlay
+   ================================================================ */
+
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(16, 20, 26, .55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.overlay[hidden] { display: none; }
+.overlay-panel {
+  background: var(--paper); border-radius: var(--radius); width: 100%; max-width: 760px;
+  box-shadow: 0 12px 40px rgba(16, 20, 26, .3); overflow: hidden;
+}
+.overlay-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px; background: var(--ink); color: #fff;
+}
+.overlay-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.overlay-close {
+  background: none; border: none; color: #cbd2da; font-size: 26px; line-height: 1;
+  cursor: pointer; padding: 0 6px; border-radius: 4px; min-height: 40px; min-width: 40px;
+}
+.overlay-close:hover { color: #fff; background: #333a42; }
+.overlay-body { padding: 16px 18px 20px; }
+
+.overlay-body fieldset {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 12px 14px 14px; margin: 0 0 14px;
+}
+.overlay-body legend {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-soft); padding: 0 6px; font-weight: 600;
+}
+.overlay-body .field-grid input,
+.overlay-body .field-grid select { min-height: 42px; }
+.form-actions button.secondary {
+  background: #fff; color: var(--ink-soft); border-color: var(--rule);
+}
+.form-actions button.secondary:hover { background: var(--ground); color: var(--ink); }
+
+/* the course-ticking list */
+.pick-semester { margin-bottom: 12px; }
+.pick-semester > h4 {
+  margin: 0 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ink-soft);
+}
+.pick-list { border: 1px solid var(--rule-soft); border-radius: 6px; max-height: 240px; overflow-y: auto; }
+.pick-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-bottom: 1px solid var(--rule-soft); font-size: 13.5px;
+}
+.pick-row:last-child { border-bottom: none; }
+.pick-row input { width: 20px; height: 20px; flex: none; }
+.pick-row .pick-code { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+.pick-row .pick-title { color: var(--ink-soft); flex: 1; }
+.pick-row .pick-year { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+.pick-row .pick-grade {
+  font-family: var(--mono); font-weight: 700; color: var(--accent); white-space: nowrap;
+}
+.pick-row .pick-grade[data-fail="yes"] { color: var(--danger); }
+.pick-empty { padding: 14px; font-size: 13px; color: var(--ink-faint); }
+.pick-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.pick-tools .field { flex: 0 1 220px; }
+.pick-tools select { width: 100%; }
+.pick-row[hidden] { display: none; }
+
+/* ================================================================
+   Sessional statement of result — the printed sheet
+   ================================================================ */
+
+/* The sheet is styled the same on screen and on paper, so that what the
+   student sees in the preview is what comes out of the printer. */
+.sheet {
+  box-sizing: border-box;
+  width: 210mm; min-height: 297mm;
+  background: #fff; color: #000;
+  /* The top of the page is left empty for the pre-printed University
+     letterhead. 62.7 mm is measured from the reference statement: the
+     letterhead's ink ends at 50.5 mm and the "To:" line begins at 62.7 mm. */
+  padding: 62.7mm 20mm 20mm 33mm;
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 11.5pt; line-height: 1.32;
+}
+.sheet .addressee { font-weight: 700; margin: 0 0 7mm; }
+.sheet .statement-title {
+  text-align: center; font-weight: 700; text-decoration: underline;
+  letter-spacing: .02em; margin: 0 0 6mm;
+}
+.sheet .details { margin: 0 0 7mm; display: flex; flex-wrap: wrap; gap: 0 6mm; }
+.sheet .details span { white-space: nowrap; }
+.sheet .details b { font-weight: 700; }
+.sheet .sheet-semester {
+  /* Its own class, not .semester: the calculator styles .semester as a bordered
+     card, and the statement must inherit none of that. */
+  margin: 0 0 6mm; padding: 0; border: none; background: none;
+  page-break-inside: avoid;
+}
+.sheet .sheet-semester h3 { font-style: italic; font-weight: 700; font-size: 11.5pt; margin: 0 0 2.5mm; }
+.sheet table.results { width: 100%; border-collapse: collapse; }
+.sheet table.results td { padding: 0 0 1.05mm; vertical-align: top; }
+.sheet td.r-code  { width: 36mm; white-space: nowrap; }
+.sheet td.r-title { width: 106mm; }
+.sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }
+.sheet .figures { margin-top: 9mm; }
+.sheet .figures div { margin-bottom: 1.5mm; font-weight: 700; }
+.sheet .signature { margin-top: 17mm; }
+.sheet .signature .hod { font-weight: 700; }
+.sheet .signature .role { font-style: italic; font-size: 10pt; }
+
+/* ---------- the preview ---------- */
+.preview-panel { max-width: 900px; }
+.preview-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--rule); background: #fafbfc;
+}
+.preview-bar button {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; min-height: 42px;
+  border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+}
+.preview-bar button.secondary { background: #fff; color: var(--ink-soft); border-color: var(--rule); }
+.preview-bar .hint { margin: 0; flex: 1 1 260px; font-size: 12px; }
+.preview-scroll {
+  background: var(--ground); padding: 16px; overflow: auto; max-height: 72vh;
+}
+.preview-scroll #print-root { width: 210mm; margin: 0 auto; box-shadow: 0 2px 12px rgba(16,20,26,.18); }
+/* The band left for the letterhead is tinted in the preview only, so the
+   student can see it is meant to be empty. It prints white. */
+.preview-scroll .sheet { position: relative; }
+.preview-scroll .sheet::before {
+  content: "reserved for the University letterhead";
+  box-sizing: border-box; pointer-events: none;
+  position: absolute; top: 0; left: 0; right: 0; height: 62.7mm;
+  background: repeating-linear-gradient(135deg, #f4f6f9, #f4f6f9 8px, #eef1f5 8px, #eef1f5 16px);
+  color: var(--ink-faint); font-family: system-ui, sans-serif; font-size: 9pt;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2mm;
+  border-bottom: 1px dashed #cfd6de;
+}
+
+@media print {
+  /* Nothing of the calculator itself is printed. */
+  body > *:not(#preview-overlay) { display: none !important; }
+  #preview-overlay { position: static !important; display: block !important; background: none !important; padding: 0 !important; overflow: visible !important; }
+  #preview-overlay .overlay-head, #preview-overlay .preview-bar { display: none !important; }
+  .overlay-panel { max-width: none !important; box-shadow: none !important; border-radius: 0 !important; }
+  .preview-scroll { background: none !important; padding: 0 !important; overflow: visible !important; max-height: none !important; }
+  .preview-scroll #print-root { box-shadow: none !important; width: auto !important; margin: 0 !important; }
+  .preview-scroll .sheet::before { display: none !important; }
+
+  @page { size: A4 portrait; margin: 0; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .sheet { page-break-after: always; box-shadow: none; }
+  .sheet:last-child { page-break-after: auto; }
+}
+
+@media (max-width: 760px) {
+  .overlay { padding: 0; }
+  .overlay-panel { max-width: none; border-radius: 0; min-height: 100%; }
+  .overlay-body { padding: 14px 12px 24px; }
+  .overlay-body .field-grid .field,
+  .overlay-body .field-grid .field.narrow,
+  .overlay-body .field-grid .field.tiny { flex: 1 1 100%; }
+  .overlay-body .field-grid .field.tiny { flex: 0 1 30%; }
+  .pick-list { max-height: 45vh; }
+}
+
 </style>
 </head>
 <body>
@@ -383,6 +552,7 @@ td.cell-units .sub {
     </div>
     <div class="actions">
       <button type="button" id="btn-export">Export results</button>
+      <button type="button" id="btn-pdf">Export as PDF</button>
       <button type="button" id="btn-import">Import results</button>
       <button type="button" id="btn-reset" class="danger">Reset results</button>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
@@ -475,6 +645,106 @@ td.cell-units .sub {
 
   <footer class="colophon" id="colophon"></footer>
 </main>
+
+<!-- Sessional statement of result: the form, then the sheet that is printed. -->
+<div class="overlay" id="pdf-overlay" hidden>
+  <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="pdf-title">
+    <header class="overlay-head">
+      <h2 id="pdf-title">Sessional Statement of Result</h2>
+      <button type="button" class="overlay-close" id="pdf-close" aria-label="Close">&times;</button>
+    </header>
+
+    <div class="overlay-body">
+      <p class="hint">
+        This produces a statement laid out like the departmental sessional statement, with the top of the
+        page left blank so it can be printed on pre-printed University letterhead. Your browser's print
+        dialog will open; choose <strong>Save as PDF</strong>, or print it straight onto headed paper.
+      </p>
+
+      <form id="pdf-form" autocomplete="off">
+        <fieldset>
+          <legend>Your details</legend>
+          <div class="field-grid">
+            <label class="field"><span>First name</span>
+              <input type="text" id="t-first" maxlength="40" pattern="[^0-9]*" required></label>
+            <label class="field"><span>Middle name</span>
+              <input type="text" id="t-middle" maxlength="40" pattern="[^0-9]*"></label>
+            <label class="field"><span>Surname</span>
+              <input type="text" id="t-surname" maxlength="40" pattern="[^0-9]*" required></label>
+            <label class="field"><span>Reg. No.</span>
+              <input type="text" id="t-regno" placeholder="2021/242857" maxlength="12"
+                     pattern="\d{4}/\d{6,7}" title="A four-digit year, a slash, then six or seven digits."
+                     inputmode="numeric" required></label>
+            <label class="field narrow"><span>Year of Study</span>
+              <select id="t-year"></select></label>
+            <label class="field narrow"><span>Gender</span>
+              <select id="t-gender">
+                <option value="">—</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select></label>
+            <label class="field narrow"><span>Session</span>
+              <select id="t-session"></select></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Head of Department</legend>
+          <p class="hint">Entered here because the office changes hands.</p>
+          <div class="field-grid">
+            <label class="field narrow"><span>Title</span>
+              <select id="t-sal1"></select></label>
+            <label class="field narrow" id="t-sal2-field"><span>Second title</span>
+              <select id="t-sal2"></select></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init1" maxlength="2" placeholder="M"></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init2" maxlength="2" placeholder="N"></label>
+            <label class="field tiny"><span>Initial</span>
+              <input type="text" id="t-init3" maxlength="2"></label>
+            <label class="field"><span>Surname</span>
+              <input type="text" id="t-hod-surname" maxlength="40" pattern="[^0-9]*" placeholder="Eke"></label>
+          </div>
+          <p class="hint" id="t-hod-preview"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Courses taken in this session</legend>
+          <p class="hint">
+            Tick the courses you sat in each semester of this session. Nothing is ticked for you.
+            Only courses you have already graded can appear on a statement.
+          </p>
+          <div id="t-courses"></div>
+        </fieldset>
+
+        <div id="t-messages" class="form-messages" hidden></div>
+
+        <div class="form-actions">
+          <button type="submit" id="t-submit">Produce statement</button>
+          <button type="button" class="secondary" id="t-cancel">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="preview-overlay" hidden>
+  <div class="overlay-panel preview-panel" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <header class="overlay-head">
+      <h2 id="preview-title">Your statement</h2>
+      <button type="button" class="overlay-close" id="preview-close" aria-label="Close">&times;</button>
+    </header>
+    <div class="preview-bar">
+      <button type="button" id="preview-print">Print / Save as PDF</button>
+      <button type="button" class="secondary" id="preview-back">Back to the form</button>
+      <span class="hint">
+        The blank band at the top is left for the pre-printed University letterhead.
+        In the print dialogue choose <strong>Save as PDF</strong>, or print onto headed paper.
+      </span>
+    </div>
+    <div class="preview-scroll"><div id="print-root"></div></div>
+  </div>
+</div>
 
 <script type="module">
 window.__UNN_CURRICULUM__ = {"schema_version":"1.0","curriculum_id":"unn-mee-beng-5yr","curriculum_version":"2023.1","institution":"University of Nigeria, Nsukka","faculty":"Faculty of Engineering","department":"Department of Mechanical Engineering","programme":"Mechanical Engineering","award":"B.Eng.","programme_track":"Five-Year Undergraduate Programme","grade_scale":{"A":5,"B":4,"C":3,"D":2,"E":1,"F":0},"cohorts":[{"cohort_id":"pre-ccmas","label":"Pre-CCMAS First Year","applies_to":["year 1"],"description":"Students who began the programme before the CCMAS revision sat the First Year as printed in the 2023 bachelors programme, page 25, rather than the revised First Year on the pre-computation form. Those courses are carried alongside the current ones and shown only when asked for; which set a student actually offered is for the student to say.","source_id":"pdf-bachelors-2023"}],"progression":{"minimum_years_to_graduate":5,"maximum_years_to_graduate":8,"repeat_attempts_rule":"maximum_years_to_graduate - course_year","failing_grades":["F"],"_comment":"A course is repeated only after it is failed. Once it is passed it cannot be taken again, so a sequence of sittings always ends at the first pass. Within that rule, a course first taken in year x may be repeated in each remaining year up to the maximum of 8, giving (8 - x) repeat attempts and (9 - x) sittings in total: 8 for a First Year course, 4 for a Fifth Year course. Every sitting counts separately in the GPA - its units enter the denominator again and its points enter the numerator again - so repeating a course degrades the GPA in the same way that taking an extra course would.","_failing_grades_note":"Confirmed with the department on 2026-09-17: E is a pass, and only F mandates a re-sit. A course graded E is therefore closed and cannot be taken again. Should this ever change, adding a grade to failing_grades is the only edit needed."},"reporting":{"gpa_decimal_places":2,"gpa_full_precision_places":5,"_comment":"gpa_decimal_places is the everyday presentation (2 is what the university reports). gpa_full_precision_places is what the 'Show full precision' switch in the interface reveals. Both are display settings only - the GPA is always computed at full precision from integer points and integer units, so more places expose digits that were already there rather than improving accuracy. The degree classification always uses the gpa_decimal_places figure, so the switch can never move a student between classes."},"sources":[{"source_id":"jpeg-first-year","document":"FIRST-YEAR-2026-09-17-18.30.34.jpeg","description":"UNN Dept. of Mechanical Engineering 'CGPA Result Pre-Computation Form', First Year block. The printed form carries the older course codes; handwritten annotations strike those out and supply the revised First Year codes and unit loads. The handwritten revision is treated as authoritative for First Year.","applies_to":["year 1"]},{"source_id":"pdf-bachelors-2023","document":"BACHELORS-PROGRAMME-14-JAN-2023-FINAL.pdf","description":"Section 2.1 'Five - Year Undergraduate Programme', sub-sections 2.1.2 to 2.1.5, printed pages 26 to the upper portion of page 30.","applies_to":["year 2","year 3","year 4","year 5"]}],"amendments":[{"date":"2026-09-17","change":"Unit loads for PHY 104 (2) and STA 112 (3) supplied by the department; the source form leaves both blank.","affects":["y1s2-PHY104","y1s2-STA112"]}],"provenance_note":"First Year is taken from the handwritten revision of the pre-computation form; Years 2-5 are taken from the 2023 bachelors programme document, which still prints the older First Year codes. The two sources therefore belong to different revisions of the same programme. Years 2-5 are reproduced exactly as printed and have not been re-coded to match the revised First Year numbering.","years":[{"year":1,"label":"First Year","semesters":[{"semester":1,"label":"First Semester","source_id":"jpeg-first-year","printed_total_units":21,"stated_total_units":16,"groups":[{"group_id":"y1s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MTH 101","title":"Elementary Mathematics I","units":2,"category":"Required Ancillary","legacy_code":"MTH 111","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"MTH 103","title":"Elementary Mathematics II","units":2,"category":"Required Ancillary","legacy_code":"MTH 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"CHM 101","title":"Basic Principles of Chemistry I","units":2,"category":"Required Ancillary","title_source":"source_document"},{"code":"CHM 107","title":"Basic Practical Chemistry","units":1,"category":"Required Ancillary","legacy_code":"CHM 171","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 101","title":"Fundamentals of Physics I","units":2,"category":"Required Ancillary","legacy_code":"PHY 121","legacy_units":3,"title_source":"inherited_from_replaced_course"},{"code":"PHY 107","title":"Practical Physics II","units":1,"category":"Required Ancillary","legacy_code":"PHY 195","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"GST 111","title":"Use of English","units":1,"category":"General Studies","legacy_code":"GSP 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"MEE 101","title":"Introduction to Engineering","units":2,"category":"Major","legacy_code":"ENGR 101","legacy_units":2,"title_source":"inherited_from_replaced_course"},{"code":"PHY 103","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."},{"code":"GET 101","title":null,"units":1,"category":"Major","title_unknown":true,"notes":"Added by the handwritten revision; no course title is stated on the form."}]},{"group_id":"y1s1-pre-ccmas","type":"cohort","cohort_id":"pre-ccmas","label":"Pre-CCMAS First Year — 2023 programme as printed","choose":null,"total_units":21,"source_id":"pdf-bachelors-2023","note":"The First Year as printed in the 2023 bachelors programme, section 2.1.1, page 25. Students who began before the CCMAS revision sat these courses instead of the ones above. They are hidden until asked for, and it is for the student to select the courses they actually offered.","courses":[{"code":"CHM 101","title":"Basic Principles of Chemistry I","units":2,"category":"Required Ancillary"},{"code":"CHM 171","title":"Basic Practical Chemistry","units":2,"category":"Required Ancillary"},{"code":"EGR 101","title":"Introduction to Engineering","units":2,"category":"Required Ancillary"},{"code":"MTH 111","title":"Elementary Mathematics I","units":3,"category":"Required Ancillary"},{"code":"MTH 121","title":"Elementary Mathematics II","units":3,"category":"Required Ancillary"},{"code":"PHY 121","title":"Fundamentals of Physics I","units":3,"category":"Required Ancillary"},{"code":"PHY 195","title":"Practical Physics II","units":2,"category":"Required Ancillary"},{"code":"GSP 101","title":"Use of English","units":2,"category":"General Studies"},{"code":"GSP 111","title":"The Use of Library and Study Skills","units":2,"category":"General Studies"}]}]},{"semester":2,"label":"Second Semester","source_id":"jpeg-first-year","printed_total_units":17,"stated_total_units":16,"total_units_source":"computed_after_department_supplied_the_two_missing_unit_loads","groups":[{"group_id":"y1s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"PHY 104","title":null,"units":2,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 2 units was supplied by the department."},{"code":"STA 112","title":null,"units":3,"category":"Required Ancillary","title_unknown":true,"units_source":"supplied_by_department","notes":"No unit load is written against this course on the form; the value of 3 units was supplied by the department."},{"code":"CHM 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GST 114","title":null,"units":1,"category":"General Studies","title_unknown":true},{"code":"CHM 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"PHY 108","title":null,"units":1,"category":"Required Ancillary","title_unknown":true},{"code":"MTH 102","title":null,"units":2,"category":"Required Ancillary","title_unknown":true},{"code":"GET 102","title":null,"units":2,"category":"Major","title_unknown":true}]},{"group_id":"y1s2-pre-ccmas","type":"cohort","cohort_id":"pre-ccmas","label":"Pre-CCMAS First Year — 2023 programme as printed","choose":null,"total_units":17,"source_id":"pdf-bachelors-2023","note":"The First Year as printed in the 2023 bachelors programme, section 2.1.1, page 25. Students who began before the CCMAS revision sat these courses instead of the ones above.","courses":[{"code":"CHM 112","title":"Basic Principles of Chemistry II","units":2,"category":"Required Ancillary"},{"code":"CHM 122","title":"Basic Principles of Organic Chemistry","units":2,"category":"Required Ancillary"},{"code":"EGR 102","title":"Applied Mechanics","units":3,"category":"Required Ancillary"},{"code":"MTH 122","title":"Elementary Mathematics III","units":3,"category":"Required Ancillary"},{"code":"PHY 116","title":"General Physics for Physical Science II","units":2,"category":"Required Ancillary"},{"code":"PHY 124","title":"Fundamentals of Physics III","units":3,"category":"Required Ancillary"},{"code":"GSP 102","title":"Use of English II","units":2,"category":"General Studies"}]}]}]},{"year":2,"label":"Second Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"groups":[{"group_id":"y2s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 211","title":"Engineering Drawing I","units":2,"category":"Major"},{"code":"MEE 261","title":"Engineering Thermodynamics I","units":2,"category":"Major"},{"code":"EGR 201","title":"Materials Science","units":2,"category":"Required Ancillary"},{"code":"EGR 203","title":"Materials Science Laboratory","units":1,"category":"Required Ancillary"},{"code":"CVE 211","title":"Strength of Materials I","units":2,"category":"Required Ancillary"},{"code":"CVE 213","title":"Strength of Materials Laboratory I","units":1,"category":"Required Ancillary"},{"code":"EEE 211","title":"Basic Electrical Engineering","units":3,"category":"Required Ancillary"},{"code":"MTH 207","title":"Advanced Mathematics VII","units":2,"category":"Required Ancillary"},{"code":"GSP 201","title":"The Social Sciences","units":2,"category":"General Studies"},{"code":"GSP 207","title":"Logic, Philosophy and Human Existence","units":2,"category":"General Studies"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"groups":[{"group_id":"y2s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 202","title":"Computing and Programming for Mechanical Engineers","units":3,"category":"Major"},{"code":"MEE 204","title":"Computing and Programming Laboratory","units":1,"category":"Major"},{"code":"MEE 212","title":"Workshop Technology","units":2,"category":"Major"},{"code":"CVE 222","title":"Fluid Mechanics I","units":2,"category":"Required Ancillary"},{"code":"CVE 224","title":"Fluid Mechanics Laboratory","units":1,"category":"Required Ancillary"},{"code":"EEE 252","title":"Basic Electrical Engineering Lab/Practice","units":1,"category":"Required Ancillary"},{"code":"MTH 206","title":"Advanced Mathematics VI","units":2,"category":"Required Ancillary"},{"code":"MTH 208","title":"Advanced Mathematics VIII","units":2,"category":"Required Ancillary"},{"code":"GSP 202","title":"Issues in Peace and Conflict Resolution Studies","units":2,"category":"General Studies"},{"code":"GSP 208","title":"Nigerian Peoples and Culture","units":2,"category":"General Studies"}]}]}]},{"year":3,"label":"Third Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 311","title":"Manufacturing Processes","units":2,"category":"Major"},{"code":"MEE 313","title":"Mechanical Engineering Design I","units":3,"category":"Major"},{"code":"MEE 315","title":"Workshop Practice","units":1,"category":"Major"},{"code":"MEE 321","title":"Thermo-Fluids Laboratory I","units":1,"category":"Major"},{"code":"MEE 323","title":"Mechanics of Machines Laboratory I","units":1,"category":"Major"},{"code":"MEE 341","title":"Mechanics of Machines I","units":2,"category":"Major"},{"code":"MEE 343","title":"Measurement and Instrumentation","units":2,"category":"Major"},{"code":"MEE 351","title":"Mechanics of Fluids","units":2,"category":"Major"},{"code":"MEE 361","title":"Engineering Thermodynamics II","units":2,"category":"Major"},{"code":"CED 341","title":"Introduction to Entrepreneurship I","units":2,"category":"Required Ancillary"},{"code":"STA 205","title":"Statistics for Physical Sciences and Engineering I","units":2,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":20,"stated_total_units":20,"groups":[{"group_id":"y3s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 312","title":"Computer-Aided Design and Manufacture","units":2,"category":"Major"},{"code":"MEE 314","title":"Engineering Drawing II","units":2,"category":"Major"},{"code":"MEE 322","title":"Mechanics of Materials Laboratory","units":1,"category":"Major"},{"code":"MEE 324","title":"CAD/CAM Laboratory","units":1,"category":"Major"},{"code":"MEE 332","title":"Mechanics of Materials I","units":3,"category":"Major"},{"code":"MEE 372","title":"Heat and Mass Transfer I","units":2,"category":"Major"},{"code":"CED 342","title":"Introduction to Entrepreneurship II","units":2,"category":"Required Ancillary"},{"code":"EEE 312","title":"Electrical Engineering II","units":3,"category":"Required Ancillary"},{"code":"EGR 302","title":"Engineering Analysis","units":4,"category":"Required Ancillary"}]}]}]},{"year":4,"label":"Fourth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":22,"stated_total_units":22,"groups":[{"group_id":"y4s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 413","title":"Mechanical Engineering Design II","units":3,"category":"Major"},{"code":"MEE 421","title":"Thermo-Fluids Laboratory II","units":1,"category":"Major"},{"code":"MEE 423","title":"Mechanics of Machines Laboratory II","units":1,"category":"Major"},{"code":"MEE 425","title":"Heat and Mass Transfer Laboratory","units":1,"category":"Major"},{"code":"MEE 441","title":"Mechanics of Machines II","units":2,"category":"Major"},{"code":"MEE 443","title":"Automatic Control","units":3,"category":"Major"},{"code":"MEE 451","title":"Applied Fluid Mechanics","units":2,"category":"Major"},{"code":"MEE 461","title":"Engineering Thermodynamics III","units":2,"category":"Major"},{"code":"MEE 471","title":"Heat and Mass Transfer II","units":2,"category":"Major"},{"code":"MEE 481","title":"Technology Development Policy","units":2,"category":"Major"},{"code":"EGR 401","title":"Computational Methods","units":3,"category":"Required Ancillary"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":15,"stated_total_units":15,"groups":[{"group_id":"y4s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 402","title":"Written Technical Communication","units":2,"category":"Major"},{"code":"MEE 404","title":"Seminar Presentation Skills","units":1,"category":"Major"},{"code":"MEE 412","title":"Computer Aided Design Practice","units":2,"category":"Major"},{"code":"EGR 402","title":"SIWES","units":10,"category":"Required Ancillary"}]}]}]},{"year":5,"label":"Fifth Year","semesters":[{"semester":1,"label":"First Semester","source_id":"pdf-bachelors-2023","printed_total_units":18,"stated_total_units":18,"elective_rule":"Two (2) elective courses (6 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s1-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 511","title":"Applied Design","units":3,"category":"Major"},{"code":"MEE 531","title":"Mechanics of Materials II","units":3,"category":"Major"},{"code":"MEE 551","title":"Fluid Dynamics","units":3,"category":"Major"},{"code":"MEE 561","title":"Engineering Thermodynamics IV","units":3,"category":"Major"}]},{"group_id":"y5s1-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 555","title":"Aerospace Engineering Fundamentals","units":3,"category":"Elective"},{"code":"MEE 557","title":"Fluid Power Transmission Systems","units":3,"category":"Elective"},{"code":"MEE 563","title":"Automotive Engine Fundamentals","units":3,"category":"Elective"},{"code":"MEE 565","title":"Fundamentals of Nuclear Engineering","units":3,"category":"Elective"},{"code":"MEE 569","title":"Direct Energy Conversion Principles","units":3,"category":"Elective"},{"code":"MEE 572","title":"Thermal Engineering and Advanced Heat Transfer","units":3,"category":"Elective"}]},{"group_id":"y5s1-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":2,"choose_units":6,"note":"Choose two (2) elective courses (6 units) from the student's option area. Option A and Option B are alternatives; a student takes electives from one option area.","courses":[{"code":"MEE 513","title":"Manufacturing and Tools Engineering","units":3,"category":"Elective"},{"code":"MEE 515","title":"Design of Welded and Cast Structures","units":3,"category":"Elective"},{"code":"MEE 533","title":"Engineering Metallurgy","units":3,"category":"Elective"},{"code":"MEE 541","title":"Systems Engineering","units":3,"category":"Elective"},{"code":"MEE 543","title":"Vibrations and Control","units":3,"category":"Elective"},{"code":"MEE 545","title":"Mechatronics","units":3,"category":"Elective"},{"code":"MEE 547","title":"Automobile Engineering","units":3,"category":"Elective"},{"code":"MEE 581","title":"Quality Assurance and Reliability","units":3,"category":"Elective"}]}]},{"semester":2,"label":"Second Semester","source_id":"pdf-bachelors-2023","printed_total_units":19,"stated_total_units":19,"elective_rule":"One (1) elective course (3 units) should be chosen from the student's option area.","groups":[{"group_id":"y5s2-req","type":"compulsory","label":"Required Courses","choose":null,"courses":[{"code":"MEE 534","title":"Materials for Engineering Applications","units":3,"category":"Major"},{"code":"MEE 582","title":"Engineering Law","units":2,"category":"Major"},{"code":"MEE 584","title":"Engineering Management","units":2,"category":"Major"},{"code":"MEE 586","title":"Engineering Economy","units":3,"category":"Major"},{"code":"MEE 592","title":"B.Eng. Project","units":6,"category":"Major"}]},{"group_id":"y5s2-opt-a","type":"elective","label":"Option A - Thermal and Fluids Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 552","title":"Computational Fluid Dynamics","units":3,"category":"Elective"},{"code":"MEE 562","title":"Refrigeration and Air-Conditioning","units":3,"category":"Elective"},{"code":"MEE 568","title":"Power Plant Engineering","units":3,"category":"Elective"}]},{"group_id":"y5s2-opt-b","type":"elective","label":"Option B - Design, Materials and Manufacturing Engineering","choose":1,"choose_units":3,"note":"Choose one (1) elective course (3 units) from the student's option area. Option A and Option B are alternatives.","courses":[{"code":"MEE 512","title":"Design of Pressure Vessels","units":3,"category":"Elective"},{"code":"MEE 532","title":"Theory of Elasticity","units":3,"category":"Elective"},{"code":"MEE 536","title":"Introduction to Composite Materials","units":3,"category":"Elective"}]}]}]}]};
@@ -1201,6 +1471,288 @@ function clearAll(state) {
   return { ...state, grades: {}, repeats: {}, unitOverrides: {} };
 }
 
+/* ======== src/transcript.js ======== */
+/**
+ * transcript.js — the sessional statement of result.
+ *
+ * Pure logic: formatting, validation, the prerequisite rule, and the figures
+ * that appear on the sheet. No DOM, no storage, no printing. The layout lives
+ * in the print stylesheet; this module decides only what the words and numbers
+ * are.
+ *
+ * Measured from the reference statement
+ * (IFEOMA_OKECHUKWU_BLESSING_TRANSCRIPT.pdf, A4, scanned at 150 dpi):
+ * the letterhead's ink ends 50.5 mm down the page and the "To:" line begins at
+ * 62.7 mm. That 62.7 mm is reserved as blank so the sheet can be printed on
+ * pre-printed University masthead paper. See LETTERHEAD_RESERVE_MM.
+ */
+
+/** Blank space at the top of the page, in millimetres. Measured, not estimated. */
+const LETTERHEAD_RESERVE_MM = 62.7;
+
+/* ------------------------------------------------------------------ names */
+
+const tidy = (s) => String(s ?? '').trim().replace(/\s+/g, ' ');
+
+/** Title case for a personal name: "ifeoma" -> "Ifeoma", "o'brien" -> "O'Brien". */
+function nameCase(s) {
+  return tidy(s).toLowerCase().replace(/(^|[\s'’-])([a-z])/g, (_, sep, ch) => sep + ch.toUpperCase());
+}
+
+/**
+ * "SURNAME, Firstname Middlename" — the form used on the reference statement's
+ * addressee line. The surname is set in capitals so it reads unambiguously,
+ * which matters in a country where either name may come first.
+ */
+function formatFullName({ first, middle, surname } = {}) {
+  const sn = tidy(surname).toUpperCase();
+  const parts = [nameCase(first), nameCase(middle)].filter(Boolean);
+  if (!sn) return parts.join(' ');
+  return parts.length ? `${sn}, ${parts.join(' ')}` : sn;
+}
+
+/**
+ * "SURNAME, Firstname M." — the shorter form the reference uses on the details
+ * line, where the middle name is reduced to an initial.
+ */
+function formatShortName({ first, middle, surname } = {}) {
+  const sn = tidy(surname).toUpperCase();
+  const fn = nameCase(first);
+  const mi = tidy(middle) ? `${tidy(middle)[0].toUpperCase()}.` : '';
+  const rest = [fn, mi].filter(Boolean).join(' ');
+  if (!sn) return rest;
+  return rest ? `${sn}, ${rest}` : sn;
+}
+
+function nameProblems({ first, surname } = {}) {
+  const out = [];
+  if (!tidy(first)) out.push('A first name is required.');
+  if (!tidy(surname)) out.push('A surname is required.');
+  for (const [label, value] of [['first name', first], ['surname', surname]]) {
+    if (tidy(value) && /\d/.test(tidy(value))) out.push(`A ${label} cannot contain numbers.`);
+  }
+  return out;
+}
+
+/* ------------------------------------------------------- registration number */
+
+/** 4-digit year, a slash, then 6 or 7 digits. For example 2021/242857. */
+const REG_NO_PATTERN = /^\d{4}\/\d{6,7}$/;
+
+function normaliseRegNo(value) {
+  return String(value ?? '').trim().replace(/\s+/g, '');
+}
+
+function regNoProblem(value) {
+  const v = normaliseRegNo(value);
+  if (!v) return 'A registration number is required.';
+  if (!REG_NO_PATTERN.test(v)) {
+    return 'A registration number is written as a four-digit year, a slash, then six or seven digits — for example 2021/242857.';
+  }
+  const year = Number(v.slice(0, 4));
+  const thisYear = new Date().getFullYear();
+  if (year < 1960 || year > thisYear + 1) {
+    return `${year} does not look like an entry year.`;
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ session */
+
+/**
+ * A session is written in full years. The reference statement reads "2023/24";
+ * that abbreviation is not used here — "2023/2024" is written out.
+ */
+function formatSession(startYear) {
+  const y = Number(startYear);
+  if (!Number.isInteger(y) || y < 1960 || y > 2100) return null;
+  return `${y}/${y + 1}`;
+}
+
+function sessionProblem(startYear) {
+  if (formatSession(startYear) === null) {
+    return 'A session is chosen by its opening year, for example 2023 for the 2023/2024 session.';
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------ year of study */
+
+/**
+ * "3/5" — the year reached over the length of the programme. The denominator is
+ * the programme's length and never the year reached, so a fourth-year student
+ * of a five-year programme is 4/5. The reference statement reads "4/4", which
+ * is wrong for a five-year programme and is not reproduced.
+ */
+function yearOfStudyOptions(programmeYears, maxYears = 8) {
+  const n = Number(programmeYears);
+  if (!Number.isInteger(n) || n < 1) return [];
+  return Array.from({ length: maxYears }, (_, i) => ({
+    value: i + 1,
+    label: `${i + 1}/${n}`,
+  }));
+}
+
+function formatYearOfStudy(year, programmeYears) {
+  const y = Number(year);
+  const n = Number(programmeYears);
+  if (!Number.isInteger(y) || !Number.isInteger(n) || y < 1 || n < 1) return null;
+  return `${y}/${n}`;
+}
+
+/* ------------------------------------------------------------------ gender */
+
+/** The field is Gender. It is not labelled Sex. */
+const GENDERS = Object.freeze(['Male', 'Female']);
+
+function genderProblem(value) {
+  return GENDERS.includes(value) ? null : 'Choose Male or Female.';
+}
+
+/* ------------------------------------------------------- head of department */
+
+/** "Engr." may be followed by a second title; the others stand alone. */
+const HOD_SALUTATIONS_1 = Object.freeze(['Engr.', 'Prof.', 'Dr.', 'Mr.']);
+const HOD_SALUTATIONS_2 = Object.freeze(['Prof.', 'Dr.', 'Mr.']);
+const HOD_SALUTATION_2_APPLIES_TO = 'Engr.';
+
+/** An initial is shown as a single capital letter and a full stop. */
+function formatInitial(value) {
+  const v = tidy(value).replace(/[^A-Za-z]/g, '');
+  return v ? `${v[0].toUpperCase()}.` : '';
+}
+
+/**
+ * "Engr. Dr. M. N. Eke". The Head of Department is entered by the student
+ * rather than fixed in the data, because the office changes hands.
+ */
+function formatHod({ salutation1, salutation2, initial1, initial2, initial3, surname } = {}) {
+  const parts = [];
+  if (HOD_SALUTATIONS_1.includes(salutation1)) parts.push(salutation1);
+  if (salutation1 === HOD_SALUTATION_2_APPLIES_TO && HOD_SALUTATIONS_2.includes(salutation2)) {
+    parts.push(salutation2);
+  }
+  for (const i of [initial1, initial2, initial3]) {
+    const f = formatInitial(i);
+    if (f) parts.push(f);
+  }
+  const sn = tidy(surname);
+  if (sn) parts.push(nameCase(sn));
+  return parts.join(' ');
+}
+
+function hodProblems(hod = {}) {
+  const out = [];
+  if (!HOD_SALUTATIONS_1.includes(hod.salutation1)) out.push('Choose a title for the Head of Department.');
+  if (!formatInitial(hod.initial1)) out.push("The Head of Department's first initial is required.");
+  if (!tidy(hod.surname)) out.push("The Head of Department's surname is required.");
+  if (tidy(hod.surname) && /\d/.test(tidy(hod.surname))) out.push("The Head of Department's surname cannot contain numbers.");
+  return out;
+}
+
+/* --------------------------------------------------------- the prerequisite */
+
+/**
+ * A statement for a given year may only be produced once every earlier year is
+ * complete. A sessional statement is a cumulative document: its CGPA is
+ * meaningless if results from earlier years are missing.
+ *
+ * `requiredCoursesForYear` is supplied by the caller, because what counts as
+ * required differs between a fixed curriculum and a list the student typed.
+ *
+ * Returns { ok, missingByYear: [{ year, courses: [course] }], missingCount }.
+ */
+function prerequisiteCheck(year, state, requiredCoursesForYear) {
+  const target = Number(year);
+  const missingByYear = [];
+  let missingCount = 0;
+
+  for (let y = 1; y < target; y++) {
+    const required = requiredCoursesForYear(y) ?? [];
+    const missing = required.filter((c) => attemptsOf(c, state).length === 0);
+    if (missing.length > 0) {
+      missingByYear.push({ year: y, courses: missing });
+      missingCount += missing.length;
+    }
+  }
+  return { ok: missingCount === 0, missingByYear, missingCount };
+}
+
+/* ------------------------------------------------------------- the figures */
+
+/**
+ * Build the statement.
+ *
+ * `selected` is the courses the student ticked, split by semester. The session
+ * GPA comes from those alone. The CGPA is cumulative: it covers every result
+ * entered for the years up to and including this one, which is what makes the
+ * prerequisite check above necessary.
+ */
+function buildTranscript({
+  student, hod, session, yearOfStudy, programmeYears,
+  firstSemester = [], secondSemester = [],
+  cumulativeCourses = [], state, decimals = 2,
+}) {
+  const rowsFor = (courses) => courses.map((course) => {
+    const ev = evaluateCourse(course, state);
+    const sittings = ev.attempts.map((a) => a.grade);
+    return {
+      id: course.id,
+      code: course.code,
+      title: (course.title ?? '').toUpperCase(),
+      units: ev.baseUnits,
+      // A course sat more than once shows every sitting, oldest first.
+      grade: sittings.join(' / '),
+      sittings,
+    };
+  });
+
+  const sessionCourses = [...firstSemester, ...secondSemester];
+  const sessionSummary = summariseRows(evaluateAll(sessionCourses, state), { decimals });
+  const cumulativeSummary = summariseRows(evaluateAll(cumulativeCourses, state), { decimals });
+
+  return {
+    addressee: formatFullName(student),
+    name: formatShortName(student),
+    regNo: normaliseRegNo(student?.regNo),
+    yearOfStudy: formatYearOfStudy(yearOfStudy, programmeYears),
+    gender: student?.gender ?? '',
+    session: formatSession(session),
+    hod: formatHod(hod),
+    semesters: [
+      { label: 'FIRST SEMESTER', rows: rowsFor(firstSemester) },
+      { label: 'SECOND SEMESTER', rows: rowsFor(secondSemester) },
+    ],
+    gpa: formatGpa(sessionSummary.gpa, decimals),
+    cgpa: formatGpa(cumulativeSummary.gpa, decimals),
+    gpaUnits: sessionSummary.units,
+    gpaPoints: sessionSummary.points,
+    cgpaUnits: cumulativeSummary.units,
+    cgpaPoints: cumulativeSummary.points,
+  };
+}
+
+/** Everything that must be right before a statement can be produced. */
+function transcriptProblems({ student, hod, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
+  const out = [
+    ...nameProblems(student),
+    ...hodProblems(hod),
+  ];
+  const reg = regNoProblem(student?.regNo);
+  if (reg) out.push(reg);
+  const gen = genderProblem(student?.gender);
+  if (gen) out.push(gen);
+  const ses = sessionProblem(session);
+  if (ses) out.push(ses);
+  if (!Number.isInteger(Number(yearOfStudy)) || Number(yearOfStudy) < 1) {
+    out.push('Choose the year of study this statement covers.');
+  }
+  if (firstSemester.length === 0 && secondSemester.length === 0) {
+    out.push('Tick at least one course for this session.');
+  }
+  return out;
+}
+
 /* ======== src/storage.js ======== */
 /**
  * storage.js — persistence, isolated behind a small async repository interface.
@@ -1477,6 +2029,391 @@ class PreferencesStore {
   }
 }
 
+/* ======== src/transcript-ui.js ======== */
+/**
+ * transcript-ui.js — the sessional statement form, and the sheet it prints.
+ *
+ * The statement is produced through the browser's own print dialogue rather
+ * than by a PDF library. That is deliberate: the sheet is meant to be printed
+ * on pre-printed University letterhead, so printing is the primary use and
+ * "Save as PDF" is the same dialogue. It also keeps the calculator free of a
+ * third-party dependency, which matters because the whole application is also
+ * shipped as one offline file.
+ *
+ * Nothing here computes a GPA; that is gpa-engine.js by way of transcript.js.
+ */
+
+
+const pick = (sel) => document.querySelector(sel);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * @param {object} opts
+ * @param {() => object}   opts.getState        current results
+ * @param {() => object[]} opts.getCourses      resolved course records
+ * @param {number}         opts.programmeYears  denominator of "Year of Study"
+ * @param {(year:number, state:object, courses:object[]) => object[]} opts.requiredCoursesForYear
+ * @param {object}         [opts.prefs]         PreferencesStore, to remember the details
+ * @param {string}         [opts.institution]
+ * @param {string}         [opts.department]
+ */
+function initTranscript(opts) {
+  const els = {
+    open: pick('#btn-pdf'),
+    overlay: pick('#pdf-overlay'),
+    close: pick('#pdf-close'),
+    cancel: pick('#t-cancel'),
+    form: pick('#pdf-form'),
+    messages: pick('#t-messages'),
+    courses: pick('#t-courses'),
+    year: pick('#t-year'),
+    gender: pick('#t-gender'),
+    session: pick('#t-session'),
+    sal1: pick('#t-sal1'),
+    sal2: pick('#t-sal2'),
+    sal2Field: pick('#t-sal2-field'),
+    hodPreview: pick('#t-hod-preview'),
+    printRoot: pick('#print-root'),
+    preview: pick('#preview-overlay'),
+    previewClose: pick('#preview-close'),
+    previewPrint: pick('#preview-print'),
+    previewBack: pick('#preview-back'),
+    first: pick('#t-first'), middle: pick('#t-middle'), surname: pick('#t-surname'),
+    regno: pick('#t-regno'),
+    init1: pick('#t-init1'), init2: pick('#t-init2'), init3: pick('#t-init3'),
+    hodSurname: pick('#t-hod-surname'),
+  };
+  if (!els.open || !els.overlay) return { open() {} };
+
+  fillSelects();
+  restoreDetails();
+  wire();
+
+  function fillSelects() {
+    els.year.innerHTML = '';
+    for (const o of yearOfStudyOptions(opts.programmeYears)) {
+      els.year.append(new Option(o.label, String(o.value)));
+    }
+
+    // Sessions: this academic year and the nine before it. A session opens in
+    // the year named, so before about September the current session is the
+    // previous calendar year's.
+    const now = new Date();
+    const currentOpening = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    els.session.innerHTML = '';
+    for (let y = currentOpening; y > currentOpening - 10; y--) {
+      els.session.append(new Option(formatSession(y), String(y)));
+    }
+
+    els.sal1.innerHTML = '';
+    for (const s of HOD_SALUTATIONS_1) els.sal1.append(new Option(s, s));
+    els.sal2.innerHTML = '';
+    for (const s of HOD_SALUTATIONS_2) els.sal2.append(new Option(s, s));
+  }
+
+  /** The second title belongs only to "Engr.". */
+  function syncSalutation2() {
+    const applies = els.sal1.value === HOD_SALUTATION_2_APPLIES_TO;
+    els.sal2Field.hidden = !applies;
+    els.hodPreview.textContent = formatHod(readHod())
+      ? `Will read: ${formatHod(readHod())}`
+      : '';
+  }
+
+  function readStudent() {
+    return {
+      first: els.first.value,
+      middle: els.middle.value,
+      surname: els.surname.value,
+      regNo: els.regno.value,
+      gender: els.gender.value,
+    };
+  }
+
+  function readHod() {
+    return {
+      salutation1: els.sal1.value,
+      salutation2: els.sal1.value === HOD_SALUTATION_2_APPLIES_TO ? els.sal2.value : '',
+      initial1: els.init1.value,
+      initial2: els.init2.value,
+      initial3: els.init3.value,
+      surname: els.hodSurname.value,
+    };
+  }
+
+  /**
+   * The details are worth remembering — a student produces a statement once a
+   * session, and retyping a name and registration number each time is a chore.
+   * They are kept with the display preferences, never with the results, and
+   * never leave the browser.
+   */
+  function rememberDetails() {
+    opts.prefs?.set('transcript', { student: readStudent(), hod: readHod() });
+  }
+
+  function restoreDetails() {
+    const saved = opts.prefs?.get('transcript');
+    if (!saved || typeof saved !== 'object') { syncSalutation2(); return; }
+    const s = saved.student ?? {}, h = saved.hod ?? {};
+    els.first.value = s.first ?? '';
+    els.middle.value = s.middle ?? '';
+    els.surname.value = s.surname ?? '';
+    els.regno.value = s.regNo ?? '';
+    if (GENDERS.includes(s.gender)) els.gender.value = s.gender;
+    if (HOD_SALUTATIONS_1.includes(h.salutation1)) els.sal1.value = h.salutation1;
+    if (HOD_SALUTATIONS_2.includes(h.salutation2)) els.sal2.value = h.salutation2;
+    els.init1.value = h.initial1 ?? '';
+    els.init2.value = h.initial2 ?? '';
+    els.init3.value = h.initial3 ?? '';
+    els.hodSurname.value = h.surname ?? '';
+    syncSalutation2();
+  }
+
+  /* ------------------------------------------------------- course ticking */
+
+  /**
+   * Only graded courses are offered: a course with no result cannot appear on a
+   * statement. Nothing is ticked — the student says what they sat this session.
+   */
+  function renderCourses() {
+    const state = opts.getState();
+    const graded = opts.getCourses().filter((c) => attemptsOf(c, state).length > 0);
+
+    els.courses.innerHTML = '';
+    if (graded.length === 0) {
+      els.courses.innerHTML =
+        '<p class="pick-empty">You have not entered any grades yet, so there is nothing to put on a statement.</p>';
+      return;
+    }
+
+    // A student sits mostly the courses of one curriculum year, so the list
+    // opens on the year being reported and can be widened for anyone carrying
+    // a course from an earlier year.
+    const years = [...new Set(graded.map((c) => c.year))].sort((a, b) => a - b);
+    const tools = document.createElement('div');
+    tools.className = 'pick-tools';
+    tools.innerHTML = '<label class="field narrow"><span>Show courses from</span></label>';
+    const filter = document.createElement('select');
+    filter.id = 't-course-year';
+    filter.append(new Option('All years', 'all'));
+    for (const y of years) filter.append(new Option(`Year ${y}`, String(y)));
+    const wanted = els.year.value;
+    filter.value = years.includes(Number(wanted)) ? wanted : 'all';
+    filter.addEventListener('change', () => applyPickFilter());
+    tools.querySelector('label').append(filter);
+    els.courses.append(tools);
+
+    for (const semester of [1, 2]) {
+      const here = graded.filter((c) => c.semester === semester);
+      const wrap = document.createElement('div');
+      wrap.className = 'pick-semester';
+      const h4 = document.createElement('h4');
+      h4.textContent = semester === 1 ? 'First semester' : 'Second semester';
+      wrap.append(h4);
+
+      const list = document.createElement('div');
+      list.className = 'pick-list';
+      if (here.length === 0) {
+        list.innerHTML = '<p class="pick-empty">No graded courses.</p>';
+      } else {
+        for (const c of here) {
+          const ev = evaluateCourse(c, state);
+          const grades = ev.attempts.map((a) => a.grade).join(' / ');
+          const failed = ev.attempts.some((a) => a.grade === 'F');
+          const row = document.createElement('label');
+          row.className = 'pick-row';
+          row.dataset.year = String(c.year);
+          row.innerHTML =
+            `<input type="checkbox" value="${esc(c.id)}" data-semester="${semester}">` +
+            `<span class="pick-code">${esc(c.code)}</span>` +
+            `<span class="pick-title">${esc(c.title ?? '')}</span>` +
+            `<span class="pick-year">Year ${c.year}</span>` +
+            `<span class="pick-grade" data-fail="${failed ? 'yes' : 'no'}">${esc(grades)}</span>`;
+          list.append(row);
+        }
+      }
+      wrap.append(list);
+      els.courses.append(wrap);
+    }
+    applyPickFilter();
+  }
+
+  /** Narrow the picker to one curriculum year, or show them all. */
+  function applyPickFilter() {
+    const want = els.courses.querySelector('#t-course-year')?.value ?? 'all';
+    for (const row of els.courses.querySelectorAll('.pick-row')) {
+      const show = want === 'all' || row.dataset.year === want;
+      row.hidden = !show;
+      // A hidden course must not be silently carried onto the statement.
+      if (!show) row.querySelector('input').checked = false;
+    }
+  }
+
+  const ticked = (semester) => {
+    const state = opts.getState();
+    const byId = new Map(opts.getCourses().map((c) => [c.id, c]));
+    return [...els.courses.querySelectorAll(`input[type=checkbox][data-semester="${semester}"]:checked`)]
+      .map((box) => byId.get(box.value))
+      .filter((c) => c && attemptsOf(c, state).length > 0);
+  };
+
+  /* ------------------------------------------------------------- messages */
+
+  function showProblems(list, heading) {
+    if (list.length === 0) { els.messages.hidden = true; els.messages.innerHTML = ''; return; }
+    const head = heading ? `<p class="msg error"><strong>${esc(heading)}</strong></p>` : '';
+    els.messages.innerHTML = head + list.map((p) => `<p class="msg error">${esc(p)}</p>`).join('');
+    els.messages.hidden = false;
+    els.messages.scrollIntoView({ block: 'nearest' });
+  }
+
+  /* -------------------------------------------------------------- the sheet */
+
+  function renderSheet(t) {
+    const semesterBlock = (label, rows, session) => {
+      if (rows.length === 0) return '';
+      return `<section class="sheet-semester">
+        <h3>${esc(label)} ${esc(session)} ACADEMIC SESSION</h3>
+        <table class="results"><tbody>${rows.map((r) => `
+          <tr>
+            <td class="r-code">${esc(r.code)}</td>
+            <td class="r-title">${esc(r.title)}</td>
+            <td class="r-grade">${esc(r.grade)}</td>
+          </tr>`).join('')}</tbody></table>
+      </section>`;
+    };
+
+    els.printRoot.innerHTML = `<div class="sheet">
+      <p class="addressee">To: ${esc(t.addressee)}</p>
+      <p class="statement-title">SESSIONAL STATEMENT OF RESULT</p>
+      <p class="details">
+        <span><b>Name:</b> ${esc(t.name)}</span>
+        <span><b>Reg. No:</b> ${esc(t.regNo)}</span>
+        <span><b>Year:</b> ${esc(t.yearOfStudy)}</span>
+        <span><b>Gender:</b> ${esc(t.gender)}</span>
+      </p>
+      ${semesterBlock(t.semesters[0].label, t.semesters[0].rows, t.session)}
+      ${semesterBlock(t.semesters[1].label, t.semesters[1].rows, t.session)}
+      <div class="figures">
+        <div>GPA: ${esc(t.gpa)}</div>
+        <div>CGPA: ${esc(t.cgpa)}</div>
+      </div>
+      <div class="signature">
+        <div class="hod">${esc(t.hod)}</div>
+        <div class="role">Head of Department</div>
+      </div>
+    </div>`;
+  }
+
+  /* --------------------------------------------------------------- events */
+
+  function open() {
+    renderCourses();
+    els.messages.hidden = true;
+    els.overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    els.first.focus();
+  }
+
+  function close() {
+    els.overlay.hidden = true;
+    els.preview.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  /** Back from the preview to the form, keeping everything that was entered. */
+  function backToForm() {
+    els.preview.hidden = true;
+    els.overlay.hidden = false;
+  }
+
+  function wire() {
+    els.open.addEventListener('click', open);
+    els.close.addEventListener('click', close);
+    els.cancel.addEventListener('click', close);
+    els.overlay.addEventListener('click', (e) => { if (e.target === els.overlay) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!els.preview.hidden) { backToForm(); return; }
+      if (!els.overlay.hidden) close();
+    });
+
+    els.year.addEventListener('change', () => {
+      const filter = els.courses.querySelector('#t-course-year');
+      if (!filter) return;
+      const wanted = els.year.value;
+      if ([...filter.options].some((o) => o.value === wanted)) filter.value = wanted;
+      applyPickFilter();
+    });
+
+    els.previewClose.addEventListener('click', close);
+    els.previewBack.addEventListener('click', backToForm);
+    els.previewPrint.addEventListener('click', () => window.print());
+    els.preview.addEventListener('click', (e) => { if (e.target === els.preview) close(); });
+
+    els.sal1.addEventListener('change', syncSalutation2);
+    for (const el of [els.sal2, els.init1, els.init2, els.init3, els.hodSurname]) {
+      el.addEventListener('input', syncSalutation2);
+    }
+
+    els.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      produce();
+    });
+  }
+
+  function produce() {
+    const state = opts.getState();
+    const student = readStudent();
+    const hod = readHod();
+    const year = Number(els.year.value);
+    const session = Number(els.session.value);
+    const firstSemester = ticked(1);
+    const secondSemester = ticked(2);
+
+    const problems = transcriptProblems({ student, hod, session, yearOfStudy: year, firstSemester, secondSemester });
+    if (problems.length > 0) { showProblems(problems); return; }
+
+    // A statement is a cumulative document, so every earlier year must be
+    // complete before one can be produced.
+    const pre = prerequisiteCheck(year, state,
+      (y) => opts.requiredCoursesForYear(y, state, opts.getCourses()));
+    if (!pre.ok) {
+      const lines = pre.missingByYear.map(({ year: y, courses }) => {
+        const codes = courses.map((c) => c.code);
+        const shown = codes.slice(0, 12).join(', ');
+        const more = codes.length > 12 ? ` and ${codes.length - 12} more` : '';
+        return `Year ${y}: ${codes.length} result${codes.length === 1 ? '' : 's'} missing — ${shown}${more}.`;
+      });
+      showProblems(lines,
+        `A statement for year ${year} cannot be produced until every earlier year is complete. ` +
+        `${pre.missingCount} result${pre.missingCount === 1 ? ' is' : 's are'} still missing:`);
+      return;
+    }
+
+    // The CGPA covers every result entered for this year and the years before it.
+    const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
+
+    const t = buildTranscript({
+      student, hod, session, yearOfStudy: year, programmeYears: opts.programmeYears,
+      firstSemester, secondSemester, cumulativeCourses, state,
+    });
+
+    rememberDetails();
+    renderSheet(t);
+    els.messages.hidden = true;
+    // The statement is shown before it is printed. On a phone especially, a
+    // print dialogue with nothing to check first is a leap of faith.
+    els.overlay.hidden = true;
+    els.preview.hidden = false;
+    els.preview.scrollTop = 0;
+    els.previewPrint.focus();
+  }
+
+  return { open, close };
+}
+
 /* ======== src/ui.js ======== */
 /**
  * ui.js — presentation only.
@@ -1485,6 +2422,7 @@ class PreferencesStore {
  * (gpa-engine.js), what the grade scale is (grading.js), where results are kept
  * (storage.js), or what the courses are (data/curriculum.json).
  */
+
 
 
 
@@ -1588,6 +2526,7 @@ async function boot() {
   buildYearNav();
   buildTables();
   wireGlobalControls();
+  wireTranscript();
   refreshAll();
   els.saveState.textContent = loaded.found
     ? `Loaded saved results${loaded.savedAt ? ` (saved ${formatWhen(loaded.savedAt)})` : ''}`
@@ -1873,6 +2812,53 @@ function wireGlobalControls() {
     syncControlsFromState();
     refreshAll();
     els.saveState.textContent = 'All results cleared';
+  });
+}
+
+/**
+ * Which courses must already be graded before a statement may be produced for a
+ * later year.
+ *
+ * Electives are excluded: a student takes two of fourteen, so requiring all of
+ * them would block everybody. The pre-CCMAS First Year is required in place of
+ * the current one for a student who has graded any of it, since a student sat
+ * one list or the other, never both.
+ */
+function requiredCoursesForYear(year, currentState, allCourses) {
+  const usesCohort = year === 1 && allCourses.some(
+    (c) => c.cohortId === 'pre-ccmas' && currentState?.grades?.[c.id],
+  );
+  return allCourses.filter((c) => {
+    if (c.year !== year) return false;
+    if (c.groupType === 'elective') return false;
+    return usesCohort ? c.cohortId === 'pre-ccmas' : c.cohortId === null;
+  });
+}
+
+function wireTranscript() {
+  // The statement is an extra. If anything about it fails, the calculator
+  // itself must still come up.
+  try {
+    wireTranscriptOrThrow();
+  } catch (err) {
+    const btn = document.getElementById('btn-pdf');
+    if (btn) {
+      btn.disabled = true;
+      btn.title = `The PDF statement is unavailable: ${err.message}`;
+    }
+    console.error('Statement unavailable:', err);
+  }
+}
+
+function wireTranscriptOrThrow() {
+  initTranscript({
+    getState: () => state,
+    getCourses: () => courses,
+    programmeYears: doc.years.length,
+    requiredCoursesForYear,
+    prefs,
+    institution: doc.institution,
+    department: doc.department,
   });
 }
 

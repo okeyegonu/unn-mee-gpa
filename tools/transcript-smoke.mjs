@@ -73,6 +73,13 @@ const fillForm = () => exec(`
   document.getElementById('t-surname').value = 'Okechukwu';
   document.getElementById('t-regno').value = '2021/242857';
   document.getElementById('t-gender').value = 'Female';
+  document.getElementById('t-sal1').value = 'Engr.';
+  document.getElementById('t-sal1').dispatchEvent(new Event('change', { bubbles: true }));
+  document.getElementById('t-sal2').value = 'Dr.';
+  document.getElementById('t-init1').value = 'M';
+  document.getElementById('t-init2').value = 'N';
+  document.getElementById('t-hod-surname').value = 'Eke';
+  document.getElementById('t-hod-surname').dispatchEvent(new Event('input', { bubbles: true }));
 `);
 
 /** Tick the first `limit` visible courses of a semester — visible meaning the
@@ -122,6 +129,9 @@ try {
     genders: Array.from(document.getElementById('t-gender').options).map(function (o) { return o.text; }),
     genderLabel: document.getElementById('t-gender').closest('label').querySelector('span').textContent.trim(),
     sessionIsTyped: document.getElementById('t-session').tagName === 'INPUT',
+    sal1: Array.from(document.getElementById('t-sal1').options).map(function (o) { return o.text; }),
+    sal2: Array.from(document.getElementById('t-sal2').options).map(function (o) { return o.text; }),
+    sal2Hidden: document.getElementById('t-sal2-field').hidden
   };`);
   check('Year of Study offers 1/5 to 8/5, and never 4/4',
     fields.years.join(',') === '1/5,2/5,3/5,4/5,5/5,6/5,7/5,8/5', fields.years.join(','));
@@ -130,6 +140,19 @@ try {
     fields.genders.join(',') === '—,Male,Female', fields.genders.join(','));
   check('the session is typed by hand, not chosen from a list',
     fields.sessionIsTyped === true);
+  check('the Head of Department titles are offered',
+    fields.sal1.join(',') === 'Engr.,Prof.,Dr.,Mr.' && fields.sal2.join(',') === 'Prof.,Dr.,Mr.',
+    `${fields.sal1.join(',')} | ${fields.sal2.join(',')}`);
+
+  /* ---- the second title appears only for Engr. ---- */
+  await exec(`var s = document.getElementById('t-sal1'); s.value = 'Prof.'; s.dispatchEvent(new Event('change', { bubbles: true }));`);
+  await settle();
+  check('the second title is hidden for Prof.',
+    (await exec(`return document.getElementById('t-sal2-field').hidden;`)) === true);
+  await exec(`var s = document.getElementById('t-sal1'); s.value = 'Engr.'; s.dispatchEvent(new Event('change', { bubbles: true }));`);
+  await settle();
+  check('and shown for Engr.',
+    (await exec(`return document.getElementById('t-sal2-field').hidden;`)) === false);
 
   /* ---- nothing is ticked, and nothing is graded yet ---- */
   check('with no grades entered, the form says so',
@@ -191,8 +214,8 @@ try {
       headings: Array.from(root.querySelectorAll('.sheet-semester h3')).map(function (h) { return h.textContent.trim(); }),
       rows: root.querySelectorAll('table.results tr').length,
       figures: Array.from(root.querySelectorAll('.figures div')).map(function (d) { return d.textContent.trim(); }),
-      signature: !!root.querySelector('.signature'),
-      mentionsOffice: /Head of Department/i.test(root.textContent)
+      hod: root.querySelector('.signature .hod').textContent.trim(),
+      role: root.querySelector('.signature .role').textContent.trim()
     };
   `);
   check('the addressee reads SURNAME, Firstname Middlename',
@@ -212,8 +235,8 @@ try {
   check('both a session GPA and a cumulative CGPA are shown',
     sheet.figures.length === 2 && /^GPA: \d\.\d\d$/.test(sheet.figures[0]) && /^CGPA: \d\.\d\d$/.test(sheet.figures[1]),
     sheet.figures.join(' | '));
-  check('the sheet names no officer and carries no signature block',
-    sheet.signature === false && sheet.mentionsOffice === false, JSON.stringify(sheet));
+  check('the Head of Department reads Engr. Dr. M. N. Eke',
+    sheet.hod === 'Engr. Dr. M. N. Eke' && sheet.role === 'Head of Department', sheet.hod);
 
   /* ---- the reserved letterhead space ----
      A driver cannot switch the page into print media, and the sheet is styled

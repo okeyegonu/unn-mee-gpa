@@ -12,8 +12,8 @@
  */
 
 import {
-  GENDERS,
-  yearOfStudyOptions, parseSession,
+  GENDERS, HOD_SALUTATIONS_1, HOD_SALUTATIONS_2, HOD_SALUTATION_2_APPLIES_TO,
+  yearOfStudyOptions, formatHod, parseSession,
   transcriptProblems, prerequisiteCheck, buildTranscript,
 } from './transcript.js';
 import { attemptsOf, evaluateCourse } from './gpa-engine.js';
@@ -44,6 +44,10 @@ export function initTranscript(opts) {
     year: pick('#t-year'),
     gender: pick('#t-gender'),
     session: pick('#t-session'),
+    sal1: pick('#t-sal1'),
+    sal2: pick('#t-sal2'),
+    sal2Field: pick('#t-sal2-field'),
+    hodPreview: pick('#t-hod-preview'),
     printRoot: pick('#print-root'),
     preview: pick('#preview-overlay'),
     previewClose: pick('#preview-close'),
@@ -51,6 +55,8 @@ export function initTranscript(opts) {
     previewBack: pick('#preview-back'),
     first: pick('#t-first'), middle: pick('#t-middle'), surname: pick('#t-surname'),
     regno: pick('#t-regno'),
+    init1: pick('#t-init1'), init2: pick('#t-init2'), init3: pick('#t-init3'),
+    hodSurname: pick('#t-hod-surname'),
   };
   if (!els.open || !els.overlay) return { open() {} };
 
@@ -83,6 +89,20 @@ export function initTranscript(opts) {
     }
     if (keep) els.year.value = keep;
 
+
+    els.sal1.innerHTML = '';
+    for (const s of HOD_SALUTATIONS_1) els.sal1.append(new Option(s, s));
+    els.sal2.innerHTML = '';
+    for (const s of HOD_SALUTATIONS_2) els.sal2.append(new Option(s, s));
+  }
+
+  /** The second title belongs only to "Engr.". */
+  function syncSalutation2() {
+    const applies = els.sal1.value === HOD_SALUTATION_2_APPLIES_TO;
+    els.sal2Field.hidden = !applies;
+    els.hodPreview.textContent = formatHod(readHod())
+      ? `Will read: ${formatHod(readHod())}`
+      : '';
   }
 
   function readStudent() {
@@ -95,6 +115,17 @@ export function initTranscript(opts) {
     };
   }
 
+  function readHod() {
+    return {
+      salutation1: els.sal1.value,
+      salutation2: els.sal1.value === HOD_SALUTATION_2_APPLIES_TO ? els.sal2.value : '',
+      initial1: els.init1.value,
+      initial2: els.init2.value,
+      initial3: els.init3.value,
+      surname: els.hodSurname.value,
+    };
+  }
+
   /**
    * The details are worth remembering — a student produces a statement once a
    * session, and retyping a name and registration number each time is a chore.
@@ -102,18 +133,25 @@ export function initTranscript(opts) {
    * never leave the browser.
    */
   function rememberDetails() {
-    opts.prefs?.set('transcript', { student: readStudent() });
+    opts.prefs?.set('transcript', { student: readStudent(), hod: readHod() });
   }
 
   function restoreDetails() {
     const saved = opts.prefs?.get('transcript');
-    if (!saved || typeof saved !== 'object') return;
-    const s = saved.student ?? {};
+    if (!saved || typeof saved !== 'object') { syncSalutation2(); return; }
+    const s = saved.student ?? {}, h = saved.hod ?? {};
     els.first.value = s.first ?? '';
     els.middle.value = s.middle ?? '';
     els.surname.value = s.surname ?? '';
     els.regno.value = s.regNo ?? '';
     if (GENDERS.includes(s.gender)) els.gender.value = s.gender;
+    if (HOD_SALUTATIONS_1.includes(h.salutation1)) els.sal1.value = h.salutation1;
+    if (HOD_SALUTATIONS_2.includes(h.salutation2)) els.sal2.value = h.salutation2;
+    els.init1.value = h.initial1 ?? '';
+    els.init2.value = h.initial2 ?? '';
+    els.init3.value = h.initial3 ?? '';
+    els.hodSurname.value = h.surname ?? '';
+    syncSalutation2();
   }
 
   /* ------------------------------------------------------- course ticking */
@@ -216,12 +254,6 @@ export function initTranscript(opts) {
 
   /* -------------------------------------------------------------- the sheet */
 
-  /**
-   * The sheet carries the student's details, their results and the two figures,
-   * and stops there. It names no officer and leaves no signature block: it is a
-   * working copy on plain paper, and anything the Department wishes to add
-   * belongs on its own letterheaded stationery.
-   */
   function renderSheet(t) {
     const semesterBlock = (label, rows, session) => {
       if (rows.length === 0) return '';
@@ -250,6 +282,10 @@ export function initTranscript(opts) {
       <div class="figures">
         <div>GPA: ${esc(t.gpa)}</div>
         <div>CGPA: ${esc(t.cgpa)}</div>
+      </div>
+      <div class="signature">
+        <div class="hod">${esc(t.hod)}</div>
+        <div class="role">Head of Department</div>
       </div>
     </div>`;
   }
@@ -300,6 +336,11 @@ export function initTranscript(opts) {
     els.previewPrint.addEventListener('click', () => window.print());
     els.preview.addEventListener('click', (e) => { if (e.target === els.preview) close(); });
 
+    els.sal1.addEventListener('change', syncSalutation2);
+    for (const el of [els.sal2, els.init1, els.init2, els.init3, els.hodSurname]) {
+      el.addEventListener('input', syncSalutation2);
+    }
+
     els.form.addEventListener('submit', (e) => {
       e.preventDefault();
       produce();
@@ -309,12 +350,13 @@ export function initTranscript(opts) {
   function produce() {
     const state = opts.getState();
     const student = readStudent();
+    const hod = readHod();
     const year = Number(els.year.value);
     const session = parseSession(els.session.value).year;
     const firstSemester = ticked(1);
     const secondSemester = ticked(2);
 
-    const problems = transcriptProblems({ student, session, yearOfStudy: year, firstSemester, secondSemester });
+    const problems = transcriptProblems({ student, hod, session, yearOfStudy: year, firstSemester, secondSemester });
     if (problems.length > 0) { showProblems(problems); return; }
 
     // A statement is a cumulative document, so every earlier year must be
@@ -338,7 +380,7 @@ export function initTranscript(opts) {
     const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
 
     const t = buildTranscript({
-      student, session, yearOfStudy: year, programmeYears: programmeYears(),
+      student, hod, session, yearOfStudy: year, programmeYears: programmeYears(),
       firstSemester, secondSemester, cumulativeCourses, state,
       uppercaseTitles: opts.uppercaseTitles !== false,
     });

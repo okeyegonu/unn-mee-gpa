@@ -461,9 +461,9 @@ td.cell-units .sub {
 .sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }
 .sheet .figures { margin-top: 9mm; }
 .sheet .figures div { margin-bottom: 1.5mm; font-weight: 700; }
-/* There is no signature block. The sheet is a student's working copy; a
-   signature, a stamp and the name of any officer belong on the Department's
-   own letterheaded paper, not on something printed from a phone. */
+.sheet .signature { margin-top: 17mm; }
+.sheet .signature .hod { font-weight: 700; }
+.sheet .signature .role { font-style: italic; font-size: 10pt; }
 
 /* ---------- the preview ---------- */
 .preview-panel { max-width: 900px; }

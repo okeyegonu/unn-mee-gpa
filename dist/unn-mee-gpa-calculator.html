@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-22T13:10:39.058Z by tools/build-single-file.mjs.
+  Built 2026-09-22T13:21:45.596Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -695,20 +695,24 @@ td.cell-units .sub {
 
         <fieldset>
           <legend>Academic Adviser</legend>
-          <p class="hint">Entered here because the office changes hands.</p>
+          <p class="hint">
+            Your own Academic Adviser — the officer who would sign this sheet. Nothing is
+            filled in for you; type their title, initials and surname. It is remembered for
+            next time.
+          </p>
           <div class="field-grid">
             <label class="field narrow"><span>Title</span>
               <select id="t-sal1"></select></label>
             <label class="field narrow" id="t-sal2-field"><span>Second title</span>
               <select id="t-sal2"></select></label>
             <label class="field tiny"><span>Initial</span>
-              <input type="text" id="t-init1" maxlength="2" placeholder="M"></label>
+              <input type="text" id="t-init1" maxlength="2" placeholder="A"></label>
             <label class="field tiny"><span>Initial</span>
-              <input type="text" id="t-init2" maxlength="2" placeholder="N"></label>
+              <input type="text" id="t-init2" maxlength="2" placeholder="B"></label>
             <label class="field tiny"><span>Initial</span>
               <input type="text" id="t-init3" maxlength="2"></label>
             <label class="field"><span>Surname</span>
-              <input type="text" id="t-adviser-surname" maxlength="40" pattern="[^0-9]*" placeholder="Eke"></label>
+              <input type="text" id="t-adviser-surname" maxlength="40" pattern="[^0-9]*" placeholder="Surname"></label>
           </div>
           <p class="hint" id="t-adviser-preview"></p>
         </fieldset>
@@ -2187,9 +2191,10 @@ function initTranscript(opts) {
   function syncSalutation2() {
     const applies = els.sal1.value === ADVISER_SALUTATION_2_APPLIES_TO;
     els.sal2Field.hidden = !applies;
-    els.adviserPreview.textContent = formatAdviser(readAdviser())
-      ? `Will read: ${formatAdviser(readAdviser())}`
-      : '';
+    // A title on its own names nobody, so the preview waits for a surname.
+    const composed = formatAdviser(readAdviser());
+    els.adviserPreview.textContent =
+      composed && readAdviser().surname.trim() ? `Will read: ${composed}` : '';
   }
 
   function readStudent() {

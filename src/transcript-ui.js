@@ -100,9 +100,10 @@ export function initTranscript(opts) {
   function syncSalutation2() {
     const applies = els.sal1.value === ADVISER_SALUTATION_2_APPLIES_TO;
     els.sal2Field.hidden = !applies;
-    els.adviserPreview.textContent = formatAdviser(readAdviser())
-      ? `Will read: ${formatAdviser(readAdviser())}`
-      : '';
+    // A title on its own names nobody, so the preview waits for a surname.
+    const composed = formatAdviser(readAdviser());
+    els.adviserPreview.textContent =
+      composed && readAdviser().surname.trim() ? `Will read: ${composed}` : '';
   }
 
   function readStudent() {

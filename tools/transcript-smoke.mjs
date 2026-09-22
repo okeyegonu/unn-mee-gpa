@@ -123,6 +123,31 @@ try {
   check('clicking it opens the form',
     (await exec(`return document.getElementById('pdf-overlay').hidden === false;`)) === true);
 
+  /* ---- the form has to fit a laptop screen ----
+     The statement form was once tall enough that the Academic Adviser section
+     sat below the fold on every ordinary screen. Nothing failed; it simply
+     could not be found. This measures what a student actually sees. */
+  await call('POST', `/session/${sid}/window/rect`, { width: 1366, height: 768, x: 0, y: 0 });
+  await settle();
+  const fold = await exec(`
+    var legends = Array.from(document.querySelectorAll('#pdf-form legend'));
+    var adviser = legends.find(function (l) { return l.textContent.indexOf('Adviser') >= 0; });
+    var r = adviser.getBoundingClientRect();
+    return {
+      viewport: window.innerHeight,
+      panelHeight: Math.round(document.querySelector('#pdf-overlay .overlay-panel').getBoundingClientRect().height),
+      adviserTop: Math.round(r.top),
+      visibleWithoutScrolling: r.top >= 0 && r.top < window.innerHeight
+    };
+  `);
+  check('the Academic Adviser section is on screen without scrolling, on a laptop',
+    fold.visibleWithoutScrolling === true, JSON.stringify(fold));
+  check('and the form is not taller than about one and a half screens',
+    fold.panelHeight < fold.viewport * 1.6,
+    `${fold.panelHeight}px against a ${fold.viewport}px viewport`);
+  await call('POST', `/session/${sid}/window/rect`, { width: 1280, height: 1400, x: 0, y: 0 });
+  await settle();
+
   /* ---- the fields ---- */
   const fields = await exec(`return {
     years: Array.from(document.getElementById('t-year').options).map(function (o) { return o.text; }),

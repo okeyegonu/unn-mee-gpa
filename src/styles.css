@@ -353,6 +353,28 @@ td.cell-units .sub {
    Sessional statement of result — the form overlay
    ================================================================ */
 
+/* The statement form lays its fields out in rows. Without these the fields are
+   plain blocks one per line, the form grows to twice the height of a laptop
+   screen, and the Academic Adviser section is pushed below the fold where
+   nobody finds it. */
+.field-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.field-grid .field { flex: 1 1 200px; }
+.field-grid .field.wide { flex: 2 1 280px; }
+.field-grid .field.narrow { flex: 0 1 170px; }
+.field-grid .field.tiny { flex: 0 1 96px; }
+.field-grid input, .field-grid select {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px;
+  background: #fff; color: inherit; width: 100%; min-width: 0; min-height: 40px;
+}
+.field-grid input:focus, .field-grid select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Validation messages in the statement form. */
+.form-messages { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.msg { margin: 0; padding: 9px 12px; border-radius: 6px; font-size: 13px; border: 1px solid; }
+.msg.error { background: var(--danger-soft); border-color: #e7bcbc; color: #6d1a1a; }
+.msg.warn { background: var(--warn-soft); border-color: #ecd9a8; color: var(--warn); }
+
+
 .overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(16, 20, 26, .55);

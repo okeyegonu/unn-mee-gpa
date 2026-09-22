@@ -495,3 +495,29 @@ Note that this does **not** by itself make a hosted copy work offline: there is
 no service worker, so opening the link still needs a connection each time. The
 offline copy is `dist/unn-mee-gpa-calculator.html`, which has everything
 embedded and never touches the network at all.
+
+---
+
+## If the Head of Department credentials are wanted back
+
+The statement once asked for the Head of Department's title, initials and
+surname, and printed them beneath the figures above the words "Head of
+Department". That was removed deliberately: the sheet is a student's working
+copy on plain paper, and a working copy has no business naming an officer.
+
+Should the University or the Department ask for it back, it is one command.
+The removal is a single commit, 2d88993, and reverting it restores the form
+field, the printed block, the styling and the tests together:
+
+```bash
+git revert 2d88993
+npm test && npm run build
+```
+
+Verified on 22 September 2026: the revert applies cleanly to this tree, and with it
+applied 158 tests pass and the statement browser suite passes, with the
+Head of Department fields offered again and the name printed as
+`Engr. Dr. M. N. Eke`.
+
+If the tree has moved on far enough that the revert conflicts, the commit
+message on 2d88993 names every file and explains what each change did.

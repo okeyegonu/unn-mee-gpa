@@ -189,12 +189,12 @@ export function genderProblem(value) {
   return GENDERS.includes(value) ? null : 'Choose Male or Female.';
 }
 
-/* ------------------------------------------------------- head of department */
+/* ------------------------------------------------------- academic adviser */
 
 /** "Engr." may be followed by a second title; the others stand alone. */
-export const HOD_SALUTATIONS_1 = Object.freeze(['Engr.', 'Prof.', 'Dr.', 'Mr.']);
-export const HOD_SALUTATIONS_2 = Object.freeze(['Prof.', 'Dr.', 'Mr.']);
-export const HOD_SALUTATION_2_APPLIES_TO = 'Engr.';
+export const ADVISER_SALUTATIONS_1 = Object.freeze(['Engr.', 'Prof.', 'Dr.', 'Mr.']);
+export const ADVISER_SALUTATIONS_2 = Object.freeze(['Prof.', 'Dr.', 'Mr.']);
+export const ADVISER_SALUTATION_2_APPLIES_TO = 'Engr.';
 
 /** An initial is shown as a single capital letter and a full stop. */
 function formatInitial(value) {
@@ -203,13 +203,13 @@ function formatInitial(value) {
 }
 
 /**
- * "Engr. Dr. M. N. Eke". The Head of Department is entered by the student
+ * "Engr. Dr. M. N. Eke". The Academic Adviser is entered by the student
  * rather than fixed in the data, because the office changes hands.
  */
-export function formatHod({ salutation1, salutation2, initial1, initial2, initial3, surname } = {}) {
+export function formatAdviser({ salutation1, salutation2, initial1, initial2, initial3, surname } = {}) {
   const parts = [];
-  if (HOD_SALUTATIONS_1.includes(salutation1)) parts.push(salutation1);
-  if (salutation1 === HOD_SALUTATION_2_APPLIES_TO && HOD_SALUTATIONS_2.includes(salutation2)) {
+  if (ADVISER_SALUTATIONS_1.includes(salutation1)) parts.push(salutation1);
+  if (salutation1 === ADVISER_SALUTATION_2_APPLIES_TO && ADVISER_SALUTATIONS_2.includes(salutation2)) {
     parts.push(salutation2);
   }
   for (const i of [initial1, initial2, initial3]) {
@@ -221,12 +221,12 @@ export function formatHod({ salutation1, salutation2, initial1, initial2, initia
   return parts.join(' ');
 }
 
-export function hodProblems(hod = {}) {
+export function adviserProblems(adviser = {}) {
   const out = [];
-  if (!HOD_SALUTATIONS_1.includes(hod.salutation1)) out.push('Choose a title for the Head of Department.');
-  if (!formatInitial(hod.initial1)) out.push("The Head of Department's first initial is required.");
-  if (!tidy(hod.surname)) out.push("The Head of Department's surname is required.");
-  if (tidy(hod.surname) && /\d/.test(tidy(hod.surname))) out.push("The Head of Department's surname cannot contain numbers.");
+  if (!ADVISER_SALUTATIONS_1.includes(adviser.salutation1)) out.push('Choose a title for the Academic Adviser.');
+  if (!formatInitial(adviser.initial1)) out.push("The Academic Adviser's first initial is required.");
+  if (!tidy(adviser.surname)) out.push("The Academic Adviser's surname is required.");
+  if (tidy(adviser.surname) && /\d/.test(tidy(adviser.surname))) out.push("The Academic Adviser's surname cannot contain numbers.");
   return out;
 }
 
@@ -269,7 +269,7 @@ export function prerequisiteCheck(year, state, requiredCoursesForYear) {
  * prerequisite check above necessary.
  */
 export function buildTranscript({
-  student, hod, session, yearOfStudy, programmeYears,
+  student, adviser, session, yearOfStudy, programmeYears,
   firstSemester = [], secondSemester = [],
   cumulativeCourses = [], state, decimals = 2,
   // The departmental statement sets course titles in capitals. Where the
@@ -302,7 +302,7 @@ export function buildTranscript({
     yearOfStudy: formatYearOfStudy(yearOfStudy, programmeYears),
     gender: student?.gender ?? '',
     session: formatSession(session),
-    hod: formatHod(hod),
+    adviser: formatAdviser(adviser),
     semesters: [
       { label: 'FIRST SEMESTER', rows: rowsFor(firstSemester) },
       { label: 'SECOND SEMESTER', rows: rowsFor(secondSemester) },
@@ -317,10 +317,10 @@ export function buildTranscript({
 }
 
 /** Everything that must be right before a statement can be produced. */
-export function transcriptProblems({ student, hod, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
+export function transcriptProblems({ student, adviser, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
   const out = [
     ...nameProblems(student),
-    ...hodProblems(hod),
+    ...adviserProblems(adviser),
   ];
   const reg = regNoProblem(student?.regNo);
   if (reg) out.push(reg);

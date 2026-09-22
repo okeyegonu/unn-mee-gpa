@@ -12,8 +12,8 @@
  */
 
 import {
-  GENDERS, HOD_SALUTATIONS_1, HOD_SALUTATIONS_2, HOD_SALUTATION_2_APPLIES_TO,
-  yearOfStudyOptions, formatHod, parseSession,
+  GENDERS, ADVISER_SALUTATIONS_1, ADVISER_SALUTATIONS_2, ADVISER_SALUTATION_2_APPLIES_TO,
+  yearOfStudyOptions, formatAdviser, parseSession,
   transcriptProblems, prerequisiteCheck, buildTranscript,
 } from './transcript.js';
 import { attemptsOf, evaluateCourse } from './gpa-engine.js';
@@ -47,7 +47,7 @@ export function initTranscript(opts) {
     sal1: pick('#t-sal1'),
     sal2: pick('#t-sal2'),
     sal2Field: pick('#t-sal2-field'),
-    hodPreview: pick('#t-hod-preview'),
+    adviserPreview: pick('#t-adviser-preview'),
     printRoot: pick('#print-root'),
     preview: pick('#preview-overlay'),
     previewClose: pick('#preview-close'),
@@ -56,7 +56,7 @@ export function initTranscript(opts) {
     first: pick('#t-first'), middle: pick('#t-middle'), surname: pick('#t-surname'),
     regno: pick('#t-regno'),
     init1: pick('#t-init1'), init2: pick('#t-init2'), init3: pick('#t-init3'),
-    hodSurname: pick('#t-hod-surname'),
+    adviserSurname: pick('#t-adviser-surname'),
   };
   if (!els.open || !els.overlay) return { open() {} };
 
@@ -91,17 +91,17 @@ export function initTranscript(opts) {
 
 
     els.sal1.innerHTML = '';
-    for (const s of HOD_SALUTATIONS_1) els.sal1.append(new Option(s, s));
+    for (const s of ADVISER_SALUTATIONS_1) els.sal1.append(new Option(s, s));
     els.sal2.innerHTML = '';
-    for (const s of HOD_SALUTATIONS_2) els.sal2.append(new Option(s, s));
+    for (const s of ADVISER_SALUTATIONS_2) els.sal2.append(new Option(s, s));
   }
 
   /** The second title belongs only to "Engr.". */
   function syncSalutation2() {
-    const applies = els.sal1.value === HOD_SALUTATION_2_APPLIES_TO;
+    const applies = els.sal1.value === ADVISER_SALUTATION_2_APPLIES_TO;
     els.sal2Field.hidden = !applies;
-    els.hodPreview.textContent = formatHod(readHod())
-      ? `Will read: ${formatHod(readHod())}`
+    els.adviserPreview.textContent = formatAdviser(readAdviser())
+      ? `Will read: ${formatAdviser(readAdviser())}`
       : '';
   }
 
@@ -115,14 +115,14 @@ export function initTranscript(opts) {
     };
   }
 
-  function readHod() {
+  function readAdviser() {
     return {
       salutation1: els.sal1.value,
-      salutation2: els.sal1.value === HOD_SALUTATION_2_APPLIES_TO ? els.sal2.value : '',
+      salutation2: els.sal1.value === ADVISER_SALUTATION_2_APPLIES_TO ? els.sal2.value : '',
       initial1: els.init1.value,
       initial2: els.init2.value,
       initial3: els.init3.value,
-      surname: els.hodSurname.value,
+      surname: els.adviserSurname.value,
     };
   }
 
@@ -133,24 +133,24 @@ export function initTranscript(opts) {
    * never leave the browser.
    */
   function rememberDetails() {
-    opts.prefs?.set('transcript', { student: readStudent(), hod: readHod() });
+    opts.prefs?.set('transcript', { student: readStudent(), adviser: readAdviser() });
   }
 
   function restoreDetails() {
     const saved = opts.prefs?.get('transcript');
     if (!saved || typeof saved !== 'object') { syncSalutation2(); return; }
-    const s = saved.student ?? {}, h = saved.hod ?? {};
+    const s = saved.student ?? {}, h = saved.adviser ?? {};
     els.first.value = s.first ?? '';
     els.middle.value = s.middle ?? '';
     els.surname.value = s.surname ?? '';
     els.regno.value = s.regNo ?? '';
     if (GENDERS.includes(s.gender)) els.gender.value = s.gender;
-    if (HOD_SALUTATIONS_1.includes(h.salutation1)) els.sal1.value = h.salutation1;
-    if (HOD_SALUTATIONS_2.includes(h.salutation2)) els.sal2.value = h.salutation2;
+    if (ADVISER_SALUTATIONS_1.includes(h.salutation1)) els.sal1.value = h.salutation1;
+    if (ADVISER_SALUTATIONS_2.includes(h.salutation2)) els.sal2.value = h.salutation2;
     els.init1.value = h.initial1 ?? '';
     els.init2.value = h.initial2 ?? '';
     els.init3.value = h.initial3 ?? '';
-    els.hodSurname.value = h.surname ?? '';
+    els.adviserSurname.value = h.surname ?? '';
     syncSalutation2();
   }
 
@@ -284,8 +284,8 @@ export function initTranscript(opts) {
         <div>CGPA: ${esc(t.cgpa)}</div>
       </div>
       <div class="signature">
-        <div class="hod">${esc(t.hod)}</div>
-        <div class="role">Head of Department</div>
+        <div class="adviser">${esc(t.adviser)}</div>
+        <div class="role">Academic Adviser</div>
       </div>
     </div>`;
   }
@@ -337,7 +337,7 @@ export function initTranscript(opts) {
     els.preview.addEventListener('click', (e) => { if (e.target === els.preview) close(); });
 
     els.sal1.addEventListener('change', syncSalutation2);
-    for (const el of [els.sal2, els.init1, els.init2, els.init3, els.hodSurname]) {
+    for (const el of [els.sal2, els.init1, els.init2, els.init3, els.adviserSurname]) {
       el.addEventListener('input', syncSalutation2);
     }
 
@@ -350,13 +350,13 @@ export function initTranscript(opts) {
   function produce() {
     const state = opts.getState();
     const student = readStudent();
-    const hod = readHod();
+    const adviser = readAdviser();
     const year = Number(els.year.value);
     const session = parseSession(els.session.value).year;
     const firstSemester = ticked(1);
     const secondSemester = ticked(2);
 
-    const problems = transcriptProblems({ student, hod, session, yearOfStudy: year, firstSemester, secondSemester });
+    const problems = transcriptProblems({ student, adviser, session, yearOfStudy: year, firstSemester, secondSemester });
     if (problems.length > 0) { showProblems(problems); return; }
 
     // A statement is a cumulative document, so every earlier year must be
@@ -380,7 +380,7 @@ export function initTranscript(opts) {
     const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
 
     const t = buildTranscript({
-      student, hod, session, yearOfStudy: year, programmeYears: programmeYears(),
+      student, adviser, session, yearOfStudy: year, programmeYears: programmeYears(),
       firstSemester, secondSemester, cumulativeCourses, state,
       uppercaseTitles: opts.uppercaseTitles !== false,
     });

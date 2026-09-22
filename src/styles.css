@@ -462,7 +462,7 @@ td.cell-units .sub {
 .sheet .figures { margin-top: 9mm; }
 .sheet .figures div { margin-bottom: 1.5mm; font-weight: 700; }
 .sheet .signature { margin-top: 17mm; }
-.sheet .signature .hod { font-weight: 700; }
+.sheet .signature .adviser { font-weight: 700; }
 .sheet .signature .role { font-style: italic; font-size: 10pt; }
 
 /* ---------- the preview ---------- */

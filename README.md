@@ -233,7 +233,7 @@ that also ships as one offline file.
 `SURNAME, Firstname Middlename` — a registration number validated as a
 four-digit year, a slash and between two and nine digits — wide enough that a
 lengthening serial will not turn a student away, the year of study, the gender
-and the session. The Head of Department is entered too, since the office changes
+and the session. The Academic Adviser is entered too, since the office changes
 hands: a title, an optional second title where the first is `Engr.`, up to three
 initials and a surname, printed as `Engr. Dr. M. N. Eke`.
 
@@ -494,26 +494,18 @@ embedded and never touches the network at all.
 
 ---
 
-## If the Head of Department credentials are wanted back
+---
 
-The statement once asked for the Head of Department's title, initials and
-surname, and printed them beneath the figures above the words "Head of
-Department". That was removed deliberately: the sheet is a student's working
-copy on plain paper, and a working copy has no business naming an officer.
+## History of the adviser's credentials on the statement
 
-Should the University or the Department ask for it back, it is one command.
-The removal is a single commit, 2d88993, and reverting it restores the form
-field, the printed block, the styling and the tests together:
+The statement asks for an **Academic Adviser's** title, initials and surname and
+prints them beneath the figures. That field was removed on 22 September 2026, on
+the reasoning that a flimsy printed on plain paper has no business naming an
+officer, and restored the same day at the University's request — relabelled from
+*Head of Department* to *Academic Adviser*, which is the officer a student
+actually deals with.
 
-```bash
-git revert 2d88993
-npm test && npm run build
-```
-
-Verified on 22 September 2026: the revert applies cleanly to this tree, and with it
-applied 158 tests pass and the statement browser suite passes, with the
-Head of Department fields offered again and the name printed as
-`Engr. Dr. M. N. Eke`.
-
-If the tree has moved on far enough that the revert conflicts, the commit
-message on 2d88993 names every file and explains what each change did.
+The removal was commit `2d88993`; the revert that undid it and the relabelling
+that followed are the commits after it. `~/revert.md` holds the procedure, and
+works in either direction: a revert is itself a commit and can be reverted in
+turn.

@@ -78,8 +78,8 @@ const fillForm = () => exec(`
   document.getElementById('t-sal2').value = 'Dr.';
   document.getElementById('t-init1').value = 'M';
   document.getElementById('t-init2').value = 'N';
-  document.getElementById('t-hod-surname').value = 'Eke';
-  document.getElementById('t-hod-surname').dispatchEvent(new Event('input', { bubbles: true }));
+  document.getElementById('t-adviser-surname').value = 'Eke';
+  document.getElementById('t-adviser-surname').dispatchEvent(new Event('input', { bubbles: true }));
 `);
 
 /** Tick the first `limit` visible courses of a semester — visible meaning the
@@ -140,7 +140,7 @@ try {
     fields.genders.join(',') === '—,Male,Female', fields.genders.join(','));
   check('the session is typed by hand, not chosen from a list',
     fields.sessionIsTyped === true);
-  check('the Head of Department titles are offered',
+  check('the Academic Adviser titles are offered',
     fields.sal1.join(',') === 'Engr.,Prof.,Dr.,Mr.' && fields.sal2.join(',') === 'Prof.,Dr.,Mr.',
     `${fields.sal1.join(',')} | ${fields.sal2.join(',')}`);
 
@@ -214,7 +214,7 @@ try {
       headings: Array.from(root.querySelectorAll('.sheet-semester h3')).map(function (h) { return h.textContent.trim(); }),
       rows: root.querySelectorAll('table.results tr').length,
       figures: Array.from(root.querySelectorAll('.figures div')).map(function (d) { return d.textContent.trim(); }),
-      hod: root.querySelector('.signature .hod').textContent.trim(),
+      adviser: root.querySelector('.signature .adviser').textContent.trim(),
       role: root.querySelector('.signature .role').textContent.trim()
     };
   `);
@@ -235,8 +235,8 @@ try {
   check('both a session GPA and a cumulative CGPA are shown',
     sheet.figures.length === 2 && /^GPA: \d\.\d\d$/.test(sheet.figures[0]) && /^CGPA: \d\.\d\d$/.test(sheet.figures[1]),
     sheet.figures.join(' | '));
-  check('the Head of Department reads Engr. Dr. M. N. Eke',
-    sheet.hod === 'Engr. Dr. M. N. Eke' && sheet.role === 'Head of Department', sheet.hod);
+  check('the Academic Adviser reads Engr. Dr. M. N. Eke',
+    sheet.adviser === 'Engr. Dr. M. N. Eke' && sheet.role === 'Academic Adviser', sheet.adviser);
 
   /* ---- the reserved letterhead space ----
      A driver cannot switch the page into print media, and the sheet is styled

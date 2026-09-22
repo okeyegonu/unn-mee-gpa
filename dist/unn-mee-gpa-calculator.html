@@ -13,7 +13,7 @@
 <!--
   UNN Mechanical Engineering GPA Calculator — single-file build.
   Curriculum unn-mee-beng-5yr version 2023.1.
-  Built 2026-09-21T17:57:19.517Z by tools/build-single-file.mjs.
+  Built 2026-09-22T04:57:19.482Z by tools/build-single-file.mjs.
   Open this file in Firefox or Chrome. Nothing is sent anywhere; your grades
   stay in your own browser.
 -->
@@ -482,9 +482,9 @@ td.cell-units .sub {
 .sheet td.r-grade { width: 15mm; text-align: left; white-space: nowrap; }
 .sheet .figures { margin-top: 9mm; }
 .sheet .figures div { margin-bottom: 1.5mm; font-weight: 700; }
-.sheet .signature { margin-top: 17mm; }
-.sheet .signature .hod { font-weight: 700; }
-.sheet .signature .role { font-style: italic; font-size: 10pt; }
+/* There is no signature block. The sheet is a student's working copy; a
+   signature, a stamp and the name of any officer belong on the Department's
+   own letterheaded paper, not on something printed from a phone. */
 
 /* ---------- the preview ---------- */
 .preview-panel { max-width: 900px; }
@@ -691,26 +691,6 @@ td.cell-units .sub {
                      inputmode="numeric" autocomplete="off"
                      title="Write the session in full years, as 2023/2024." required></label>
           </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Head of Department</legend>
-          <p class="hint">Entered here because the office changes hands.</p>
-          <div class="field-grid">
-            <label class="field narrow"><span>Title</span>
-              <select id="t-sal1"></select></label>
-            <label class="field narrow" id="t-sal2-field"><span>Second title</span>
-              <select id="t-sal2"></select></label>
-            <label class="field tiny"><span>Initial</span>
-              <input type="text" id="t-init1" maxlength="2" placeholder="M"></label>
-            <label class="field tiny"><span>Initial</span>
-              <input type="text" id="t-init2" maxlength="2" placeholder="N"></label>
-            <label class="field tiny"><span>Initial</span>
-              <input type="text" id="t-init3" maxlength="2"></label>
-            <label class="field"><span>Surname</span>
-              <input type="text" id="t-hod-surname" maxlength="40" pattern="[^0-9]*" placeholder="Eke"></label>
-          </div>
-          <p class="hint" id="t-hod-preview"></p>
         </fieldset>
 
         <fieldset>
@@ -1666,47 +1646,6 @@ function genderProblem(value) {
   return GENDERS.includes(value) ? null : 'Choose Male or Female.';
 }
 
-/* ------------------------------------------------------- head of department */
-
-/** "Engr." may be followed by a second title; the others stand alone. */
-const HOD_SALUTATIONS_1 = Object.freeze(['Engr.', 'Prof.', 'Dr.', 'Mr.']);
-const HOD_SALUTATIONS_2 = Object.freeze(['Prof.', 'Dr.', 'Mr.']);
-const HOD_SALUTATION_2_APPLIES_TO = 'Engr.';
-
-/** An initial is shown as a single capital letter and a full stop. */
-function formatInitial(value) {
-  const v = tidy(value).replace(/[^A-Za-z]/g, '');
-  return v ? `${v[0].toUpperCase()}.` : '';
-}
-
-/**
- * "Engr. Dr. M. N. Eke". The Head of Department is entered by the student
- * rather than fixed in the data, because the office changes hands.
- */
-function formatHod({ salutation1, salutation2, initial1, initial2, initial3, surname } = {}) {
-  const parts = [];
-  if (HOD_SALUTATIONS_1.includes(salutation1)) parts.push(salutation1);
-  if (salutation1 === HOD_SALUTATION_2_APPLIES_TO && HOD_SALUTATIONS_2.includes(salutation2)) {
-    parts.push(salutation2);
-  }
-  for (const i of [initial1, initial2, initial3]) {
-    const f = formatInitial(i);
-    if (f) parts.push(f);
-  }
-  const sn = tidy(surname);
-  if (sn) parts.push(nameCase(sn));
-  return parts.join(' ');
-}
-
-function hodProblems(hod = {}) {
-  const out = [];
-  if (!HOD_SALUTATIONS_1.includes(hod.salutation1)) out.push('Choose a title for the Head of Department.');
-  if (!formatInitial(hod.initial1)) out.push("The Head of Department's first initial is required.");
-  if (!tidy(hod.surname)) out.push("The Head of Department's surname is required.");
-  if (tidy(hod.surname) && /\d/.test(tidy(hod.surname))) out.push("The Head of Department's surname cannot contain numbers.");
-  return out;
-}
-
 /* --------------------------------------------------------- the prerequisite */
 
 /**
@@ -1746,7 +1685,7 @@ function prerequisiteCheck(year, state, requiredCoursesForYear) {
  * prerequisite check above necessary.
  */
 function buildTranscript({
-  student, hod, session, yearOfStudy, programmeYears,
+  student, session, yearOfStudy, programmeYears,
   firstSemester = [], secondSemester = [],
   cumulativeCourses = [], state, decimals = 2,
   // The departmental statement sets course titles in capitals. Where the
@@ -1779,7 +1718,6 @@ function buildTranscript({
     yearOfStudy: formatYearOfStudy(yearOfStudy, programmeYears),
     gender: student?.gender ?? '',
     session: formatSession(session),
-    hod: formatHod(hod),
     semesters: [
       { label: 'FIRST SEMESTER', rows: rowsFor(firstSemester) },
       { label: 'SECOND SEMESTER', rows: rowsFor(secondSemester) },
@@ -1794,11 +1732,8 @@ function buildTranscript({
 }
 
 /** Everything that must be right before a statement can be produced. */
-function transcriptProblems({ student, hod, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
-  const out = [
-    ...nameProblems(student),
-    ...hodProblems(hod),
-  ];
+function transcriptProblems({ student, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
+  const out = [...nameProblems(student)];
   const reg = regNoProblem(student?.regNo);
   if (reg) out.push(reg);
   const gen = genderProblem(student?.gender);
@@ -2131,10 +2066,6 @@ function initTranscript(opts) {
     year: pick('#t-year'),
     gender: pick('#t-gender'),
     session: pick('#t-session'),
-    sal1: pick('#t-sal1'),
-    sal2: pick('#t-sal2'),
-    sal2Field: pick('#t-sal2-field'),
-    hodPreview: pick('#t-hod-preview'),
     printRoot: pick('#print-root'),
     preview: pick('#preview-overlay'),
     previewClose: pick('#preview-close'),
@@ -2142,8 +2073,6 @@ function initTranscript(opts) {
     previewBack: pick('#preview-back'),
     first: pick('#t-first'), middle: pick('#t-middle'), surname: pick('#t-surname'),
     regno: pick('#t-regno'),
-    init1: pick('#t-init1'), init2: pick('#t-init2'), init3: pick('#t-init3'),
-    hodSurname: pick('#t-hod-surname'),
   };
   if (!els.open || !els.overlay) return { open() {} };
 
@@ -2176,20 +2105,6 @@ function initTranscript(opts) {
     }
     if (keep) els.year.value = keep;
 
-
-    els.sal1.innerHTML = '';
-    for (const s of HOD_SALUTATIONS_1) els.sal1.append(new Option(s, s));
-    els.sal2.innerHTML = '';
-    for (const s of HOD_SALUTATIONS_2) els.sal2.append(new Option(s, s));
-  }
-
-  /** The second title belongs only to "Engr.". */
-  function syncSalutation2() {
-    const applies = els.sal1.value === HOD_SALUTATION_2_APPLIES_TO;
-    els.sal2Field.hidden = !applies;
-    els.hodPreview.textContent = formatHod(readHod())
-      ? `Will read: ${formatHod(readHod())}`
-      : '';
   }
 
   function readStudent() {
@@ -2202,17 +2117,6 @@ function initTranscript(opts) {
     };
   }
 
-  function readHod() {
-    return {
-      salutation1: els.sal1.value,
-      salutation2: els.sal1.value === HOD_SALUTATION_2_APPLIES_TO ? els.sal2.value : '',
-      initial1: els.init1.value,
-      initial2: els.init2.value,
-      initial3: els.init3.value,
-      surname: els.hodSurname.value,
-    };
-  }
-
   /**
    * The details are worth remembering — a student produces a statement once a
    * session, and retyping a name and registration number each time is a chore.
@@ -2220,25 +2124,18 @@ function initTranscript(opts) {
    * never leave the browser.
    */
   function rememberDetails() {
-    opts.prefs?.set('transcript', { student: readStudent(), hod: readHod() });
+    opts.prefs?.set('transcript', { student: readStudent() });
   }
 
   function restoreDetails() {
     const saved = opts.prefs?.get('transcript');
-    if (!saved || typeof saved !== 'object') { syncSalutation2(); return; }
-    const s = saved.student ?? {}, h = saved.hod ?? {};
+    if (!saved || typeof saved !== 'object') return;
+    const s = saved.student ?? {};
     els.first.value = s.first ?? '';
     els.middle.value = s.middle ?? '';
     els.surname.value = s.surname ?? '';
     els.regno.value = s.regNo ?? '';
     if (GENDERS.includes(s.gender)) els.gender.value = s.gender;
-    if (HOD_SALUTATIONS_1.includes(h.salutation1)) els.sal1.value = h.salutation1;
-    if (HOD_SALUTATIONS_2.includes(h.salutation2)) els.sal2.value = h.salutation2;
-    els.init1.value = h.initial1 ?? '';
-    els.init2.value = h.initial2 ?? '';
-    els.init3.value = h.initial3 ?? '';
-    els.hodSurname.value = h.surname ?? '';
-    syncSalutation2();
   }
 
   /* ------------------------------------------------------- course ticking */
@@ -2341,6 +2238,12 @@ function initTranscript(opts) {
 
   /* -------------------------------------------------------------- the sheet */
 
+  /**
+   * The sheet carries the student's details, their results and the two figures,
+   * and stops there. It names no officer and leaves no signature block: it is a
+   * working copy on plain paper, and anything the Department wishes to add
+   * belongs on its own letterheaded stationery.
+   */
   function renderSheet(t) {
     const semesterBlock = (label, rows, session) => {
       if (rows.length === 0) return '';
@@ -2369,10 +2272,6 @@ function initTranscript(opts) {
       <div class="figures">
         <div>GPA: ${esc(t.gpa)}</div>
         <div>CGPA: ${esc(t.cgpa)}</div>
-      </div>
-      <div class="signature">
-        <div class="hod">${esc(t.hod)}</div>
-        <div class="role">Head of Department</div>
       </div>
     </div>`;
   }
@@ -2423,11 +2322,6 @@ function initTranscript(opts) {
     els.previewPrint.addEventListener('click', () => window.print());
     els.preview.addEventListener('click', (e) => { if (e.target === els.preview) close(); });
 
-    els.sal1.addEventListener('change', syncSalutation2);
-    for (const el of [els.sal2, els.init1, els.init2, els.init3, els.hodSurname]) {
-      el.addEventListener('input', syncSalutation2);
-    }
-
     els.form.addEventListener('submit', (e) => {
       e.preventDefault();
       produce();
@@ -2437,13 +2331,12 @@ function initTranscript(opts) {
   function produce() {
     const state = opts.getState();
     const student = readStudent();
-    const hod = readHod();
     const year = Number(els.year.value);
     const session = parseSession(els.session.value).year;
     const firstSemester = ticked(1);
     const secondSemester = ticked(2);
 
-    const problems = transcriptProblems({ student, hod, session, yearOfStudy: year, firstSemester, secondSemester });
+    const problems = transcriptProblems({ student, session, yearOfStudy: year, firstSemester, secondSemester });
     if (problems.length > 0) { showProblems(problems); return; }
 
     // A statement is a cumulative document, so every earlier year must be
@@ -2467,7 +2360,7 @@ function initTranscript(opts) {
     const cumulativeCourses = opts.getCourses().filter((c) => c.year <= year);
 
     const t = buildTranscript({
-      student, hod, session, yearOfStudy: year, programmeYears: programmeYears(),
+      student, session, yearOfStudy: year, programmeYears: programmeYears(),
       firstSemester, secondSemester, cumulativeCourses, state,
       uppercaseTitles: opts.uppercaseTitles !== false,
     });

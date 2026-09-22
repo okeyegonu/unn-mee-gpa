@@ -162,13 +162,6 @@ try {
     document.getElementById('t-surname').value = ${JSON.stringify(details.surname)};
     document.getElementById('t-regno').value = ${JSON.stringify(details.reg)};
     document.getElementById('t-gender').value = ${JSON.stringify(details.gender)};
-    var s1 = document.getElementById('t-sal1'); s1.value = 'Engr.';
-    s1.dispatchEvent(new Event('change', { bubbles: true }));
-    document.getElementById('t-sal2').value = 'Dr.';
-    document.getElementById('t-init1').value = 'M';
-    document.getElementById('t-init2').value = 'N';
-    document.getElementById('t-hod-surname').value = 'Eke';
-    document.getElementById('t-hod-surname').dispatchEvent(new Event('input', { bubbles: true }));
     var y = document.getElementById('t-year');
     y.value = ${JSON.stringify(details.year)};
     if (!y.value) y.value = y.options[0].value;
@@ -176,18 +169,6 @@ try {
     document.getElementById('t-session').value = '2023/2024';
   `);
   await settle(400);
-  if (KIND !== 'mee') {
-    // A Medicine HOD is not an engineer.
-    await exec(`
-      var s1 = document.getElementById('t-sal1'); s1.value = 'Prof.';
-      s1.dispatchEvent(new Event('change', { bubbles: true }));
-      document.getElementById('t-init1').value = 'C';
-      document.getElementById('t-init2').value = 'U';
-      document.getElementById('t-hod-surname').value = 'Anyanwu';
-      document.getElementById('t-hod-surname').dispatchEvent(new Event('input', { bubbles: true }));
-    `);
-    await settle(200);
-  }
   const ticked = await exec(`
     var n = 0;
     document.querySelectorAll('#t-courses .pick-row').forEach(function (r) {
@@ -221,14 +202,13 @@ try {
       headings: Array.from(document.querySelectorAll('#print-root .sheet-semester h3')).map(function (h) { return h.textContent.trim(); }),
       rows: document.querySelectorAll('#print-root table.results tr').length,
       figures: Array.from(document.querySelectorAll('#print-root .figures div')).map(function (d) { return d.textContent.trim(); }),
-      hod: document.querySelector('#print-root .signature .hod').textContent.trim()
     };
   `);
   console.log(`${OUT}  (${ticked} courses ticked)`);
   console.log(`  ${figures.addressee}`);
   console.log(`  ${figures.details}`);
   for (const h of figures.headings) console.log(`  ${h}`);
-  console.log(`  ${figures.rows} course rows · ${figures.figures.join(' · ')} · ${figures.hod}`);
+  console.log(`  ${figures.rows} course rows · ${figures.figures.join(' · ')}`);
 } finally {
   await call('DELETE', `/session/${sid}`).catch(() => {});
 }

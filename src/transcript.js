@@ -189,47 +189,6 @@ export function genderProblem(value) {
   return GENDERS.includes(value) ? null : 'Choose Male or Female.';
 }
 
-/* ------------------------------------------------------- head of department */
-
-/** "Engr." may be followed by a second title; the others stand alone. */
-export const HOD_SALUTATIONS_1 = Object.freeze(['Engr.', 'Prof.', 'Dr.', 'Mr.']);
-export const HOD_SALUTATIONS_2 = Object.freeze(['Prof.', 'Dr.', 'Mr.']);
-export const HOD_SALUTATION_2_APPLIES_TO = 'Engr.';
-
-/** An initial is shown as a single capital letter and a full stop. */
-function formatInitial(value) {
-  const v = tidy(value).replace(/[^A-Za-z]/g, '');
-  return v ? `${v[0].toUpperCase()}.` : '';
-}
-
-/**
- * "Engr. Dr. M. N. Eke". The Head of Department is entered by the student
- * rather than fixed in the data, because the office changes hands.
- */
-export function formatHod({ salutation1, salutation2, initial1, initial2, initial3, surname } = {}) {
-  const parts = [];
-  if (HOD_SALUTATIONS_1.includes(salutation1)) parts.push(salutation1);
-  if (salutation1 === HOD_SALUTATION_2_APPLIES_TO && HOD_SALUTATIONS_2.includes(salutation2)) {
-    parts.push(salutation2);
-  }
-  for (const i of [initial1, initial2, initial3]) {
-    const f = formatInitial(i);
-    if (f) parts.push(f);
-  }
-  const sn = tidy(surname);
-  if (sn) parts.push(nameCase(sn));
-  return parts.join(' ');
-}
-
-export function hodProblems(hod = {}) {
-  const out = [];
-  if (!HOD_SALUTATIONS_1.includes(hod.salutation1)) out.push('Choose a title for the Head of Department.');
-  if (!formatInitial(hod.initial1)) out.push("The Head of Department's first initial is required.");
-  if (!tidy(hod.surname)) out.push("The Head of Department's surname is required.");
-  if (tidy(hod.surname) && /\d/.test(tidy(hod.surname))) out.push("The Head of Department's surname cannot contain numbers.");
-  return out;
-}
-
 /* --------------------------------------------------------- the prerequisite */
 
 /**
@@ -269,7 +228,7 @@ export function prerequisiteCheck(year, state, requiredCoursesForYear) {
  * prerequisite check above necessary.
  */
 export function buildTranscript({
-  student, hod, session, yearOfStudy, programmeYears,
+  student, session, yearOfStudy, programmeYears,
   firstSemester = [], secondSemester = [],
   cumulativeCourses = [], state, decimals = 2,
   // The departmental statement sets course titles in capitals. Where the
@@ -302,7 +261,6 @@ export function buildTranscript({
     yearOfStudy: formatYearOfStudy(yearOfStudy, programmeYears),
     gender: student?.gender ?? '',
     session: formatSession(session),
-    hod: formatHod(hod),
     semesters: [
       { label: 'FIRST SEMESTER', rows: rowsFor(firstSemester) },
       { label: 'SECOND SEMESTER', rows: rowsFor(secondSemester) },
@@ -317,11 +275,8 @@ export function buildTranscript({
 }
 
 /** Everything that must be right before a statement can be produced. */
-export function transcriptProblems({ student, hod, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
-  const out = [
-    ...nameProblems(student),
-    ...hodProblems(hod),
-  ];
+export function transcriptProblems({ student, session, yearOfStudy, firstSemester = [], secondSemester = [] }) {
+  const out = [...nameProblems(student)];
   const reg = regNoProblem(student?.regNo);
   if (reg) out.push(reg);
   const gen = genderProblem(student?.gender);

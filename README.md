@@ -233,9 +233,13 @@ that also ships as one offline file.
 `SURNAME, Firstname Middlename` — a registration number validated as a
 four-digit year, a slash and between two and nine digits — wide enough that a
 lengthening serial will not turn a student away, the year of study, the gender
-and the session. The Head of Department is entered too, since the office changes
-hands: a title, an optional second title where the first is `Engr.`, up to three
-initials and a surname, printed as `Engr. Dr. M. N. Eke`.
+and the session.
+
+**The sheet names nobody.** It carries the student's details, their results and
+the two figures, and stops there — no officer's name, and no signature block.
+A signature, a stamp and the name of any officer belong on the Department's own
+letterheaded paper, not on something a student printed from a phone. The blank
+band at the top leaves room for exactly that.
 
 Three details follow the Department's usage rather than the reference sheet,
 which has them wrong: the year of study reads `3/5` — the denominator is the
